@@ -2,6 +2,10 @@
 
 include("include.php");
 
+if(!isset($_GET['letmein']) && $_SERVER['REMOTE_ADDR'] != '::1'){
+    die();
+}
+
 if(isset($_GET['eventId']))
 {
     $eventId = $_GET['eventId'];
