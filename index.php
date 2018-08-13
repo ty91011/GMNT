@@ -3,7 +3,7 @@
 include("include.php");
 
 if(!isset($_GET['letmein']) && $_SERVER['REMOTE_ADDR'] != '::1'){
-    die();
+    echo "Unauthorized user"; die();
 }
 
 if(isset($_GET['eventId']))
