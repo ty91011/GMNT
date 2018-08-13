@@ -261,7 +261,7 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
     $result = DB::query("select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC");
     if(count($result))
     {
-        echo "Retrieving from cache";
+        //echo "Retrieving from cache";
         $contents = $result[0]['contents'];
         $fromCache = true;
     }
@@ -290,14 +290,14 @@ function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="30 minute")
     $result = DB::query("select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC");
     if(count($result))
     {
-        echo "Retrieving availability from cache";
+        //echo "Retrieving availability from cache";
         $contents = $result[0]['contents'];
     }
     else 
     {
         
         $offersURL = "https://services.ticketmaster.com/api/ismds/event/$eventId/facets?q=available&by=shape+attributes+available+accessibility+offer+placeGroups+inventoryType+offerType+description&show=places&embed=description&resaleChannelId=internal.ecommerce.consumer.desktop.web.browser.ticketmaster.us&unlock=&apikey=$apiKey&apisecret=$apiSecret";
-        echo "Retrieving facets from $offersURL<br>";
+        //echo "Retrieving facets from $offersURL<br>";
         
         $agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
         

@@ -12,6 +12,11 @@ include("meekrodb.2.3.class.php");
 include("functions.php");
 
 
+// Security
+if(!isset($_GET['letmein']) && $_SERVER['REMOTE_ADDR'] != '::1'){
+    echo "Unauthorized user"; die();
+}
+
 /*
 $uri = 'https://skybox.vividseats.com/services/inventory?api-token=2794461f-7da7-4c86-a27c-87e2ae79ebda';
 $ch = curl_init($uri);
