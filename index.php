@@ -17,6 +17,11 @@ else
     $eventId = "0B00546E63D3145E";
 }
 
+if(isset($_POST['importEventIds']))
+{
+    // Import IDS
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -335,46 +340,33 @@ else
           <div class="x_panel">
             <div class="row x_title">
                   <div class="col-md-6">
-                    <h3>Import Event <small>If event exists, update existing</small></h3>
+                    <h3>Import Event(s) <small>If event exists, update existing</small></h3>
                   </div>
 
                 <div class="x_content">
-                                  <form>
-                            TM EVENT ID: <input type="text" name="eventId" value="<?php echo $eventId;?>"><input type="submit">
+			<form method="POST">
+                            TM EVENT ID: <textarea rows=5 name="importEventIds" value=""><?php echo $eventId;?></textarea><input type="submit">
                         </form>
                 </div>
             </div>
           </div>
-
-                      <?php
-
-                      $events = DB::query("SELECT * FROM events WHERE name like '%JAY%'");
-                      foreach($events AS $event)
-                      {
-                          ?>
             <div class="x_panel">
-                <div class="row x_title">
-                    <div class="col-md-3">
-                        <img src='<?=$event[image];?>'>
-                    </div>
-                    <div class="col-md-6">
-                        <?php echo "<h3>$event[name]<br>$event[venue]<br>$event[date]</h3><small><a target='_blank' href='https://www1.ticketmaster.com/event/$event[tmId]?SREF=P_HomePageModule_main&f_PPL=true&ab=efeat5787v1'>TICKETMASTER LINK</a></small>"; ?>
-                    </div>
-                </div>
               <div class="row">
                   <div class="col-md-12 col-sm-12 col-xs-12">
                       <div class="x_content">
-                        <table id="datatable-buttons" class="table table-striped table-bordered bulk_action">
+                        <table id="datatable" class="table table-striped table-bordered">
                               <thead>
                                 <tr>
-                                    <th><input type="checkbox" id="check-all" class="flat"></th>
-                                  <th>Section</th>
-                                  <th>Row</th>
-                                  <th>Ticket Price</th>
-                                  <th>Status</th>
-                                  <th>Number of Groups</th>
-                                  <th>Low Seats</th>
-                                  <th>Last Updated</th>
+				    <th>Edit</th>
+                                  <th>Name</th>
+                                  <th>Venue</th>
+                                  <th>Time Til Event</th>
+                                  
+                                  <th>Availability</th>
+                                  <th>Average Price</th>
+                                  <th>Skybox</th>
+				  
+				  <th>Last Updated</th>
                                 </tr>
                               </thead>
 
@@ -382,21 +374,31 @@ else
                               <tbody>
                                 <?php
 
-                                $groups = DB::query("SELECT section, row, ticketPrice, status, GROUP_CONCAT(lowSeat) as lowSeats, count(1) as numGroups, max(lastUpdated) as lastUpdated FROM groups WHERE tmId='$event[tmId]' GROUP BY status, section, row, ticketPrice ORDER BY section asc, row asc");
-                                foreach($groups AS $group)
+                                $events = DB::query("SELECT * 
+						    FROM events e 
+							    left join 
+							    (
+								    select tmId s, sum(availability) as num, round(avg(ticketPrice),2) as avgPrice, sum(case when skyboxStatus='ON SKYBOX' then 1 else 0 end) as skybox, max(lastUpdated) as lastUpdated
+								    from inventory
+								    group by tmId
+							    ) i
+							    on e.tmId = i.s
+						    GROUP BY e.id
+						    ORDER BY e.id DESC");
+                                foreach($events AS $event)
                                 {
+				    $timeTilEvent = floor((strtotime($event['datetime']) - time())/86400) . " days";
                                     echo "
                                     <tr>
-                                        <td class='a-center '>
-                                            <input type='checkbox' class='flat' name='table_records'>
-                                        </td>
-                                        <td>$group[section]</td>
-                                        <td>$group[row]</td>
-                                        <td>$group[ticketPrice]</td>
-                                        <td>$group[status]</td>
-                                        <td>$group[numGroups]</td>
-                                        <td>$group[lowSeats]</td>
-                                        <td>$group[lastUpdated]</td>
+					<td><a href='/event.php?eventId=$event[tmId]'><button type='button' class='btn btn-success btn-sm'>EDIT</button></a>
+                                        <td>$event[name]</td>
+                                        <td>$event[venue]<br>$event[date]</td>
+                                        <td>$timeTilEvent</td>
+                                        <td>$event[num]</td>
+                                        <td>$event[avgPrice]</td>
+                                        <td>$event[skybox]</td>
+					
+					    <td>$event[lastUpdated]</td>
                                     </tr>
                                     ";
                                 }
@@ -408,11 +410,6 @@ else
                 </div>
             </div>
           </div>
-          <?php
-                                }
-
-
-                      ?>
           <br />
           <!--
           <div class="row">

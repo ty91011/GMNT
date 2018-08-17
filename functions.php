@@ -2,89 +2,213 @@
 
 function getEvent($eventId, $force=false)
 {
+    $result = DB::query("SELECT * FROM events WHERE tmId='$eventId'");
+    if(count($result))
+    {
+	$event = $result[0];
+	$tickets = DB::query("SELECT * FROM tickets WHERE tmId='$eventId'");
+	$event['tickets'] = $tickets;
+    }
+    // Event does not exist yet
+    else
+    {
+	// Get basic event Info
+	$contents = getTMEventPage($eventId);
+	$event = parseEventInfo($contents);
+	// Insert Event into DB
+        DB::insertUpdate("events", $event);
+    }
+    
+    // Grab all needed information from TM's page contents
+    $event = populateEvent($event, $force);
+
+
+    return $event;
+}
+
+function populateEvent($event, $force=false)
+{
+    $eventId = $event['tmId'];
+    
     $fromCache = false;
     if($force)
     {
-        $contents = getTMEventPage($eventId, $fromCache, "0 minute");
+	$contents = getTMEventPage($eventId, $fromCache, "0 minute");
     }
     else
     {
-        $contents = getTMEventPage($eventId, $fromCache);
+	$contents = getTMEventPage($eventId, $fromCache);
     }
-    
-    // Grab event data
-    $event = getEventInfo($contents);
-    
+
     // Grab all offers for event
     $offers = getOffers($contents);
-    
+
     // Grab all seats in venue
     $seats = getEventSeats($eventId);
-    
-    // Get credentials
-    $credentials = getCredentials($contents);
-    
+
+    // Get TM API credentials
+    $credentials = getCredentials($contents);	
+
     // Get available seats
     $facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret']);
     foreach($facets AS $facet)
     {
 
-        foreach($facet['places'] AS $seatId)
-        {
-            $seats[$seatId]['offer'] = $offers[$facet['offers'][0]];
-        }
+	foreach($facet['places'] AS $seatId)
+	{
+	    $seats[$seatId]['offer'] = $offers[$facet['offers'][0]];
+	}
     }
-    
+
     $tickets = array();
+
     foreach($seats AS $seatId => $seat)
     {
+	if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
+	{
+	    
+	    continue;
+	}
 
-        if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary')
-        {
-            continue;
-        }
-
-        $tickets[] = array(
-            "tmId" => $seatId,
-            "section" => $seat['section'],
-            "row" => $seat['row'],
-            "seatFrom" => $seat['seat'],
-            "seatTo" => $seat['seat'],
-            "listPrice" => $seat['offer']['listPrice'],
-            "totalPrice" => $seat['offer']['totalPrice'],
-            "totalQuantity" => 1,
-            "status" => "AVAILABLE",
-            "eventId" => $eventId
-        );
+	$tickets[] = array(
+	    "tmId" => $eventId,
+	    "section" => $seat['section'],
+	    "row" => $seat['row'],
+	    "seatFrom" => $seat['seat'],
+	    "seatTo" => $seat['seat'],
+	    "listPrice" => $seat['offer']['listPrice'],
+	    "totalPrice" => $seat['offer']['totalPrice'],
+	    "totalQuantity" => 1,
+	    "status" => "AVAILABLE",
+	    "seatId" => $seatId
+	);
     }
+    
+    $event['tickets'] = $tickets;
 
     // Refresh all data sets
-    if(!$fromCache)
+    // TODO GET RID OF TRUE
+    if(!$fromCache || true)
     {
-        // Cache event, page, and availability
-        DB::insertUpdate("events", $event);
-        
-        // Set tickets to UNAVAILABLE so that we know which tickets will not be updated upon availability, this also freezes "updated" time in the DB to when the ticket was made unavailable
-        DB::query("UPDATE tickets SET status='UNAVAILABLE' WHERE tmId='$eventId' and status = 'AVAILABLE'");
-        echo "updating tickets to unavailabile<br>";
-    
-        // Bulk insert/update check
-        DB::insertUpdate('tickets', $tickets, array("status" => "AVAILABLE"));
-        echo "updating tickets to availabile<br>";
-        
-        
+	updateInventory($eventId, $tickets);
     }
-    updateTicketGroups($eventId, $tickets);
-    $event['tickets'] = $tickets;
-    
-    
-    
+
     return $event;
 }
 
-function updateTicketGroups($eventId, $tickets = array())
+function updateInventory($eventId, $tickets = array())
 {
-    $validRows = getValidRows($tickets);
+    // Reset ticket to identify new groupings
+    DB::query("UPDATE tickets SET status='UNAVAILABLE' WHERE tmId='$eventId' and status = 'AVAILABLE'");
+    DB::insertUpdate('tickets', $tickets, array("status" => "AVAILABLE"));
+    
+    $validRows = getValidRows($eventId, $tickets);
+
+    // Check for now invalid rows
+    $dbRows = DB::query("SELECT id, section, row from inventory where tmId='$eventId' and skyboxStatus='ON SKYBOX'");
+    foreach($dbRows AS $dbRow)
+    {
+        // There is corresponding section/row pair in valid row in the dbRows
+        if(isset($validRows[$dbRow['section']][$dbRow['row']]))
+        {
+            // Do nothing
+        }
+        else
+        {
+            // Do something
+            //echo "INVALID $dbRow[section]:$dbRow[row]<br>";
+            
+            DB::query("UPDATE inventory SET skyboxStatus='PENDING SKYBOX REMOVAL' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
+            
+            // Take down from Skybox
+            SkyBox::removeInventory($dbRow['id']);
+            
+            // Update status
+            DB::query("UPDATE inventory SET skyboxStatus='REMOVED FROM SKYBOX' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
+        }
+    }
+    
+    // Reset rows
+    DB::query("UPDATE inventory SET tmStatus='UNAVAILABLE' WHERE tmId='$eventId' AND tmStatus='AVAILABLE'");
+    
+    // Update inventory
+    $inventory = array();
+    foreach($validRows AS $section)
+    {
+	foreach($section AS $row)
+	{
+	    $inventory[] = $row;
+	}
+    }
+    DB::insertUpdate("inventory", $inventory, array("tmStatus" => "AVAILABLE"));
+    
+
+}
+
+function getValidRows($eventId, $tickets = array(), $consecutiveCount = 4, $minGroupsThreshold = 2)
+{
+    $venue = array();
+    
+    // Populate heirarchy
+    foreach($tickets as $ticket)
+    {
+        $venue[$ticket['section']][$ticket['row']]['seats'][] = $ticket['seatFrom'];
+        $venue[$ticket['section']][$ticket['row']]['totalPrice'] = $ticket['totalPrice'];
+    }
+    
+    $validRows = array();
+    
+    // Populate valid rows
+    foreach($venue AS $section => $rows)
+    {
+        foreach($rows AS $row => $rowInfo)
+        {
+            $seats = $rowInfo['seats'];
+            // Sort numerically ascending
+            sort($seats);
+	    
+	    $validGroups = 0;
+	    $seatFroms = array();
+	    
+            // Find $consecutiveCount in a row for each row
+            for($seatNum = min($seats); $seatNum <= max($seats); $seatNum++)
+            {
+                $rangeToFind = range($seatNum, $seatNum+$consecutiveCount-1);
+                if (count(array_intersect($rangeToFind, $seats)) == $consecutiveCount)
+                {
+		    // Start iterator on next seat from last
+                    $seatNum += $consecutiveCount-1;
+		    
+		    // Increase incrementor for found valid groups
+                    $validGroups++;
+                    $seatFroms[] = $seatNum;
+                }
+            }
+	    
+	    // Valid groups threshold
+	    if($validGroups >= $minGroupsThreshold)
+	    {
+		$validRows[$section][$row] = array(
+		    "tmId" => $eventId,
+		    "tmStatus" => "AVAILABLE",
+		    "skyboxStatus" => "NOT ON SKYBOX",
+		    "section" => $section,
+		    "row" => $row,
+		    "quantity" => $consecutiveCount,
+		    "availability" => $validGroups,
+		    "seatFroms" => implode(",", $seatFroms),
+		    "ticketPrice" => $rowInfo['totalPrice']
+		);
+	    }
+	    
+        }
+    }
+
+    return $validRows;
+}
+
+function getValidGroups($eventId, $validRows)
+{
     $validGroups = array();
     
     foreach($validRows AS $sectionName => $section)
@@ -109,89 +233,11 @@ function updateTicketGroups($eventId, $tickets = array())
             }
         }
     }
-    unset($validRows['10-H'][54]);
-    DB::insertIgnore("groups", $validGroups);
     
-    // Check for now invalid rows
-    $dbRows = DB::query("SELECT distinct section, row, status from groups where tmId='$eventId' and status='ON SKYBOX'");
-    foreach($dbRows AS $dbRow)
-    {
-        // There is corresponding section/row pair in valid row in the dbRows
-        if(isset($validRows[$dbRow['section']][$dbRow['row']]))
-        {
-            // Do nothing
-        }
-        else
-        {
-            // Do something
-            echo "INVALID $dbRow[section]:$dbRow[row]<br>";
-            
-            DB::query("UPDATE groups SET status='PENDING SKYBOX REMOVAL' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
-            
-            // Take down from Skybox
-            // TODO: 
-            
-            
-            // Update status
-            DB::query("UPDATE groups SET status='REMOVED FROM SKYBOX' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
-        }
-    }
-
+    return $validGroups;
 }
 
-function getValidRows($tickets = array(), $consecutiveCount = 4, $minGroupsThreshold = 2)
-{
-    $venue = array();
-    
-    // Populate heirarchy
-    foreach($tickets as $ticket)
-    {
-        $venue[$ticket['section']][$ticket['row']]['seats'][] = $ticket['seatFrom'];
-        $venue[$ticket['section']][$ticket['row']]['totalPrice'] = $ticket['totalPrice'];
-    }
-    
-    $validRows = array();
-    
-    // Populate valid rows
-    foreach($venue AS $section => $rows)
-    {
-        foreach($rows AS $row => $rowInfo)
-        {
-            $seats = $rowInfo['seats'];
-            // Sort numerically ascending
-            sort($seats);
-            
-            // Find $consecutiveCount in a row for each row
-            for($seatNum = min($seats); $seatNum <= max($seats); $seatNum++)
-            {
-                $rangeToFind = range($seatNum, $seatNum+$consecutiveCount-1);
-                if (count(array_intersect($rangeToFind, $seats)) == $consecutiveCount)
-                {
-                    //echo "Found consecutive from $seatNum to " . ($seatNum+$consecutiveCount-1) . "<br>";
-                    $seatNum += $consecutiveCount-1;
-                    
-                    $validRows[$section][$row][] = array("seatFrom" => $seatNum, "seatTo" => $seatNum+$consecutiveCount-1, "totalPrice" => $rowInfo['totalPrice']);
-                }
-            }
-        }
-    }
-
-    foreach($validRows AS $sectionKey => $section)
-    {
-        foreach($section AS $rowKey => $rows)
-        {
-            if(count($rows) < $minGroupsThreshold)
-            {
-                unset($validRows[$sectionKey][$rowKey]);
-                continue;
-            }
-        }
-    }
-    
-    return $validRows;
-}
-
-function getEventInfo($contents)
+function parseEventInfo($contents)
 {
     $matches = array();
     preg_match("/storeUtils\['eventJSONData']=(\{.*\})/", $contents, $matches);
@@ -261,19 +307,44 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
     $result = DB::query("select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC");
     if(count($result))
     {
-        //echo "Retrieving from cache";
+        echo "Retrieving from cache";
         $contents = $result[0]['contents'];
         $fromCache = true;
     }
     else 
     {
+	
         $htmlURL = "https://www1.ticketmaster.com/event/$eventId?SREF=P_HomePageModule_main&f_PPL=true&ab=efeat5787v1";
-        $contents = file_get_contents($htmlURL); 
-        
+	$agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
+	
+	$ghostKey = "5b74c5bed80211534379454";
+	$proxyURL = "https://ghostproxies.com/proxies/api.json?key=$ghostKey";
+	$proxyJSON = file_get_contents($proxyURL);
+	$proxyList = json_decode($proxyJSON, true);
+	
+	$proxy = array_rand($proxyList['data']);
+	$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
+	
+	$ch = curl_init();
+	
+	curl_setopt($ch, CURLOPT_PROXY, $proxyIP); 
+	
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_VERBOSE, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, $agent);
+        curl_setopt($ch, CURLOPT_URL,$htmlURL);
+        $contents = curl_exec($ch);
+
+	
+	
+       // $contents = file_get_contents($htmlURL); 
+	
         $cacheContents = array(
             "type" => $eventPageType,
             "contents" => $contents,
-            "tmId" => $eventId
+            "tmId" => $eventId,
+	    "proxyUsed" => $proxy['ip']
         );
         
         // Cache event page contents
@@ -362,4 +433,22 @@ function getEventSeats($eventId)
     unset($seats['venueConfigId']);
     
     return $seats;
+}
+
+function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup)
+{
+    // Build query
+    $parameters = "";
+    $parameters .= " and ticketPrice <= $maxPrice and availability >= $minGroups ";
+
+
+    $query = "SELECT * "
+	    . "FROM inventory "
+	    . "WHERE tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' and tmId='$eventId'
+" . $parameters
+	    . "ORDER BY section asc, row asc ";
+    
+    $inventory = DB::query($query);   
+
+    return $inventory;
 }

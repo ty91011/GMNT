@@ -383,20 +383,20 @@ else
                                 <?php
 
                                 $groups = DB::query("SELECT section, row, ticketPrice, status, GROUP_CONCAT(lowSeat) as lowSeats, count(1) as numGroups, max(lastUpdated) as lastUpdated FROM groups WHERE tmId='$event[tmId]' GROUP BY status, section, row, ticketPrice ORDER BY section asc, row asc");
-                                foreach($groups AS $group)
+                                foreach($groups AS $inventoryItem)
                                 {
                                     echo "
                                     <tr>
                                         <td class='a-center '>
                                             <input type='checkbox' class='flat' name='table_records'>
                                         </td>
-                                        <td>$group[section]</td>
-                                        <td>$group[row]</td>
-                                        <td>$group[ticketPrice]</td>
-                                        <td>$group[status]</td>
-                                        <td>$group[numGroups]</td>
-                                        <td>$group[lowSeats]</td>
-                                        <td>$group[lastUpdated]</td>
+                                        <td>$inventoryItem[section]</td>
+                                        <td>$inventoryItem[row]</td>
+                                        <td>$inventoryItem[ticketPrice]</td>
+                                        <td>$inventoryItem[status]</td>
+                                        <td>$inventoryItem[numGroups]</td>
+                                        <td>$inventoryItem[lowSeats]</td>
+                                        <td>$inventoryItem[lastUpdated]</td>
                                     </tr>
                                     ";
                                 }
