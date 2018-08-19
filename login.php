@@ -1,3 +1,13 @@
+<?php
+    session_start();
+    if(isset($_GET['logout']))
+    {
+	unset($_SESSION['user']);
+	session_unset();
+	session_destroy();
+    }
+    
+?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,7 +17,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Gentelella Alela! | </title>
+    <title>GMNT | Tickets</title>
 
     <!-- Bootstrap -->
     <link href="../vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -30,32 +40,32 @@
       <div class="login_wrapper">
         <div class="animate form login_form">
           <section class="login_content">
-            <form>
-              <h1>Login Form</h1>
+              <form method="POST" action="/actions/login.php">
+              <h1>Login</h1>
               <div>
-                <input type="text" class="form-control" placeholder="Username" required="" />
+                <input type="text" class="form-control" placeholder="Username" name="username" required="" />
               </div>
               <div>
-                <input type="password" class="form-control" placeholder="Password" required="" />
+                <input type="password" class="form-control" placeholder="Password" name="password" required="" />
               </div>
               <div>
-                <a class="btn btn-default submit" href="index.html">Log in</a>
-                <a class="reset_pass" href="#">Lost your password?</a>
+                <input type="submit" class="submit" value="Login"/>
+                <!--<a class="reset_pass" href="#">Lost your password?</a>-->
               </div>
 
               <div class="clearfix"></div>
 
               <div class="separator">
-                <p class="change_link">New to site?
-                  <a href="#signup" class="to_register"> Create Account </a>
-                </p>
+                <!--<p class="change_link">New to site?
+                  <a href="#signup" class="to_register"> Ask Admin </a>
+                </p>-->
 
                 <div class="clearfix"></div>
                 <br />
 
                 <div>
-                  <h1><i class="fa fa-paw"></i> Gentelella Alela!</h1>
-                  <p>©2016 All Rights Reserved. Gentelella Alela! is a Bootstrap 3 template. Privacy and Terms</p>
+                  <h1><i class="fa fa-paw"></i> GMNT</h1>
+                  <p>©2016 All Rights Reserved.</p>
                 </div>
               </div>
             </form>

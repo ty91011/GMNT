@@ -76,12 +76,42 @@ if(isset($_POST['map']) && $_POST['sbId'] != '')
 			    { 
 				?>
 			    
-			    <div class="x_content">
+			    <div class="x_content" style='background-color: yellow'>
 				<div class="col-md-12">
 				   <?php
 				   
-				   $results = Skybox::searchEvents($event);
-
+				   $results = Skybox::searchEvents($event, $_POST['venue'], $_POST['datetime'], $_POST['name']);
+				   ?>
+				    <h3>Mapping Search Filters</h3>
+				    <form method="POST">
+					<div class="form-group">
+					    <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Event Name
+					    </label>
+					    <div class="col-md-6 col-sm-6 col-xs-12">
+					      <input type="text" name="name" class="form-control col-md-7 col-xs-12" value="<?php echo isset($_POST['name']) ? $_POST['name'] : $event['name']; ?>">
+					    </div>
+					  </div>
+					<br><br>
+					    <div class="form-group">
+					    <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Venue
+					    </label>
+					    <div class="col-md-6 col-sm-6 col-xs-12">
+					      <input type="text" name="venue" class="form-control col-md-7 col-xs-12" value="<?php echo isset($_POST['venue']) ? $_POST['venue'] : $event['venue']; ?>">
+					    </div>
+					  </div>
+					<br><br>
+					<div class="form-group">
+					    <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Datetime
+					    </label>
+					    <div class="col-md-6 col-sm-6 col-xs-12">
+					      <input type="text" name="datetime" class="form-control col-md-7 col-xs-12" value="<?php echo isset($_POST['datetime']) ? $_POST['datetime'] : $event['datetime']; ?>">
+					    </div>
+					  </div>
+					<br><br><input type=submit name='search' value='Search for Mappings' class='btn-success'>
+				    </form>
+				    <div class="ln_solid"></div>
+				    <h3>Mapping Search Results</h3><br />
+				    <?php
 				   if(count($results['rows']))
 				    {
 					foreach($results['rows'] AS $row)

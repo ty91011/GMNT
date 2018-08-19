@@ -94,26 +94,30 @@ class Skybox
 		)  
 	));
 	$out = curl_exec($ch);
-	var_dump($out);
-	var_dump(curl_getinfo($ch, CURLINFO_HTTP_CODE));
-	print "<pre>";
+//	var_dump($out);
+//	var_dump(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+//	print "<pre>";
 	$skybox = json_decode($out, true);
-	echo json_encode($skybox, JSON_PRETTY_PRINT);
+	//echo json_encode($skybox, JSON_PRETTY_PRINT);
 	curl_close($ch);
 	return $out;
     }
     
-    static function searchEvents($event)
+    static function searchEvents($event, $venue = null, $datetime = null, $name=null)
     {
+	$filters = array();
+
 	$filters = [
-	    "venue" => $event['venue'],
-	    "eventDateFrom" => date("Y-m-d", strtotime($event['datetime'])),
-	    "eventDateTo" => date("Y-m-d", strtotime($event['datetime']) + 86400),
-	    "excludeParking" => "true"
+	    "venue" => is_null($venue) ? $event['venue'] : $venue,
+	    "eventDateFrom" => is_null($datetime) ? date("Y-m-d", strtotime($event['datetime'])) : date("Y-m-d", strtotime($datetime)),
+	    "eventDateTo" => is_null($datetime) ? date("Y-m-d", strtotime($event['datetime']) + 86400) : date("Y-m-d", strtotime($datetime)+86400),
+	    "excludeParking" => "true",
+	    "event" => is_null($name) ? "" : $name,
 	];
+	
 	$fields = http_build_query($filters);
 	$urlSuffix = "events?$fields";
-	echo $urlSuffix . "<br>";
+	//echo $urlSuffix . "<br>";
 	$out = self::apiRequest($urlSuffix, "GET", $postFields);
 	return json_decode($out, true);
     }

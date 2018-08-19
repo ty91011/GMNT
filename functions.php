@@ -14,6 +14,13 @@ function getEvent($eventId, $force=false)
     {
 	// Get basic event Info
 	$contents = getTMEventPage($eventId);
+	
+	// Invalid Event or cannot retrieve TM page
+	if(!$contents)
+	{
+	    return false;
+	}
+	
 	$event = parseEventInfo($contents);
 	// Insert Event into DB
         DB::insertUpdate("events", $event);
@@ -64,6 +71,7 @@ function populateEvent($event, $force=false)
 
     foreach($seats AS $seatId => $seat)
     {
+
 	if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
 	{
 	    
@@ -80,7 +88,8 @@ function populateEvent($event, $force=false)
 	    "totalPrice" => $seat['offer']['totalPrice'],
 	    "totalQuantity" => 1,
 	    "status" => "AVAILABLE",
-	    "seatId" => $seatId
+	    "seatId" => $seatId,
+	    "offerType" => $seat['offer']['offerType']
 	);
     }
     
@@ -276,8 +285,9 @@ function getOffers($contents)
     
     $matches = array();
     preg_match("/storeUtils\['eventOfferJSON']=(\[.*\])/", $contents, $matches);
+    
     $offersJSON = json_decode($matches[1], true);
-        
+    
     // Parse each offer group
     foreach($offersJSON AS $offer)
     {
@@ -285,6 +295,7 @@ function getOffers($contents)
             'offerId' => $offer['offerId'],
             'name' => $offer['name'],
             'inventoryType' => $offer['inventoryType'],
+	    'offerType' => $offer['offerType'],
             'section' => $offer['section'],
             'row' => $offer['row'],
             'seatFrom' => $offer['seatFrom'],
@@ -304,7 +315,8 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
     $eventPageType = "eventPage";
     
    // Try to find most recent cache within $cacheTime
-    $result = DB::query("select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC");
+    $query = "select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC";
+    $result = DB::query($query);
     if(count($result))
     {
         echo "Retrieving from cache";
@@ -336,7 +348,10 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
         curl_setopt($ch, CURLOPT_URL,$htmlURL);
         $contents = curl_exec($ch);
 
-	
+	if($contents == "")
+	{
+	    return false;
+	}
 	
        // $contents = file_get_contents($htmlURL); 
 	
@@ -451,4 +466,37 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup)
     $inventory = DB::query($query);   
 
     return $inventory;
+}
+
+function redirect($url)
+{
+    header("Location: $url");
+    exit;
+}
+
+function showNotification($type)
+{
+    if(isset($_SESSION['notifications'][$type]))
+    {
+	echo $_SESSION['notifications'][$type];
+    }
+    deleteNotification($type);
+}
+
+function storeNotification($type, $notification)
+{
+    $notification = <<<EOT
+	    <div class="alert alert-success alert-dismissible fade in" role="alert">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span>
+                    </button>
+                    <strong>$notification</strong>
+                  </div>
+EOT;
+    
+    $_SESSION['notifications'][$type] = $notification;
+}
+
+function deleteNotification($type)
+{
+    unset($_SESSION['notifications'][$type]);
 }

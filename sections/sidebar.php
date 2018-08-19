@@ -16,7 +16,7 @@
               </div>
               <div class="profile_info">
                 <span>Welcome,</span>
-                <h2>John Doe</h2>
+                <h2>Mason Richman</h2>
               </div>
             </div>
             <!-- /menu profile quick info -->
@@ -31,6 +31,7 @@
                   <li><a><i class="fa fa-home"></i> Home <span class="fa fa-chevron-down"></span></a>
                     <ul class="nav child_menu">
                       <li><a href="index.php">Dashboard</a></li>
+		      <li><a href="event.php">Event Details</a></li>
                       <!--<li><a href="index2.html">Dashboard2</a></li>
                       <li><a href="index3.html">Dashboard3</a></li>-->
                     </ul>
