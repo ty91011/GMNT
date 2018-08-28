@@ -94,11 +94,11 @@ class Skybox
 		)  
 	));
 	$out = curl_exec($ch);
-//	var_dump($out);
-//	var_dump(curl_getinfo($ch, CURLINFO_HTTP_CODE));
-//	print "<pre>";
+	var_dump($out);
+	var_dump(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+	print "<pre>";
 	$skybox = json_decode($out, true);
-	//echo json_encode($skybox, JSON_PRETTY_PRINT);
+	echo json_encode($skybox, JSON_PRETTY_PRINT);
 	curl_close($ch);
 	return $out;
     }

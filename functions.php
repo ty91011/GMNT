@@ -319,7 +319,7 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
     $result = DB::query($query);
     if(count($result))
     {
-        echo "Retrieving from cache";
+        error_log("Event $eventId: Retrieving from cache");
         $contents = $result[0]['contents'];
         $fromCache = true;
     }
@@ -339,9 +339,12 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
 	
 	$ch = curl_init();
 	
-	curl_setopt($ch, CURLOPT_PROXY, $proxyIP); 
-	
+        curl_setopt($ch, CURLOPT_PROXY, $proxy['ip']);
+        curl_setopt($ch, CURLOPT_PORT, $proxy['portNum']);
+        curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy['panel_user'] . ":" . $proxy['panel_pass']);
+
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_VERBOSE, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, $agent);
