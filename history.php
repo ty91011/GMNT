@@ -56,7 +56,7 @@ include("include.php");
 	(SELECT * FROM history ORDER BY lastUpdated DESC LIMIT 50) a
 	LEFT JOIN
 	(select * from events) b
-	ON a.tmId=b.tmId");
+	ON a.tmId=b.tmId ORDER BY a.lastUpdated DESC");
 		    foreach($results AS $result)
 		    {
 			echo "<tr>
