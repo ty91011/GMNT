@@ -24,6 +24,8 @@ function getEvent($eventId, $force=false)
 	$event = parseEventInfo($contents);
 	// Insert Event into DB
         DB::insertUpdate("events", $event);
+	
+	insertHistory($eventId, "New Event Added", "Added <strong>$event[name]</strong> @ $event[venue] on $event[datetime]");
     }
     
     // Grab all needed information from TM's page contents
@@ -113,8 +115,8 @@ function updateInventory($eventId, $tickets = array())
     
     $validRows = getValidRows($eventId, $tickets);
 
-    // Check for now invalid rows
-    $dbRows = DB::query("SELECT id, section, row from inventory where tmId='$eventId' and skyboxStatus='ON SKYBOX'");
+    // Check for now invalid rows that are already on Skybox
+    $dbRows = DB::query("SELECT id, sbId, section, row from inventory where tmId='$eventId' and skyboxStatus='ON SKYBOX'");
     foreach($dbRows AS $dbRow)
     {
         // There is corresponding section/row pair in valid row in the dbRows
@@ -129,11 +131,15 @@ function updateInventory($eventId, $tickets = array())
             
             DB::query("UPDATE inventory SET skyboxStatus='PENDING SKYBOX REMOVAL' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
             
+	    insertHistory($eventId, "PENDING SKYBOX REMOVAL", "Section $dbRow[section] and Row $dbRow[row]");
+	    
             // Take down from Skybox
-            SkyBox::removeInventory($dbRow['id']);
-            
-            // Update status
-            DB::query("UPDATE inventory SET skyboxStatus='REMOVED FROM SKYBOX' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
+            if(SkyBox::removeInventory($dbRow['sbId']) !== false)
+	    {            
+		// Update upon success
+		DB::query("UPDATE inventory SET skyboxStatus='REMOVED FROM SKYBOX' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
+		insertHistory($eventId, "REMOVED FROM SKYBOX", "Section $dbRow[section] and Row $dbRow[row]");
+	    }
         }
     }
     
@@ -150,9 +156,18 @@ function updateInventory($eventId, $tickets = array())
 	}
     }
     DB::insertUpdate("inventory", $inventory, array("tmStatus" => "AVAILABLE"));
-    
-
 }
+
+function insertHistory($tmId, $type, $status)
+{
+    $history = array(
+	"type" => $type,
+	"status" => $status,
+	"tmId" => $tmId
+    );
+    DB::insertIgnore("history", $history);
+}
+
 
 function getValidRows($eventId, $tickets = array(), $consecutiveCount = 4, $minGroupsThreshold = 2)
 {
@@ -325,7 +340,6 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
     }
     else 
     {
-	
         $htmlURL = "https://www1.ticketmaster.com/event/$eventId?SREF=P_HomePageModule_main&f_PPL=true&ab=efeat5787v1";
 	$agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
 	
@@ -336,6 +350,8 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
 	
 	$proxy = array_rand($proxyList['data']);
 	$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
+	
+	error_log("Hitting $htmlURL to cache");
 	
 	$ch = curl_init();
 	
@@ -387,7 +403,7 @@ function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="30 minute")
         
         $offersURL = "https://services.ticketmaster.com/api/ismds/event/$eventId/facets?q=available&by=shape+attributes+available+accessibility+offer+placeGroups+inventoryType+offerType+description&show=places&embed=description&resaleChannelId=internal.ecommerce.consumer.desktop.web.browser.ticketmaster.us&unlock=&apikey=$apiKey&apisecret=$apiSecret";
         //echo "Retrieving facets from $offersURL<br>";
-        
+        error_log("Hitting $offersURL");
         $agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
         
         $ch = curl_init();
@@ -419,7 +435,7 @@ function getEventSeats($eventId)
 {
     $url = "https://mapsapi.tmol.io/maps/geometry/3/event/$eventId/placeDetailNoKeys?systemId=HOST&useHostGrids=true&app=CCP";
     $geometry = file_get_contents("https://mapsapi.tmol.io/maps/geometry/3/event/$eventId/placeDetailNoKeys?systemId=HOST&useHostGrids=true&app=CCP");
-    
+    error_log("Hitting $url");
 
     $seats = json_decode($geometry, true);
     
@@ -486,10 +502,10 @@ function showNotification($type)
     deleteNotification($type);
 }
 
-function storeNotification($type, $notification)
+function storeNotification($type, $notification, $color="success")
 {
     $notification = <<<EOT
-	    <div class="alert alert-success alert-dismissible fade in" role="alert">
+	    <div class="alert alert-$color alert-dismissible fade in" role="alert">
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span>
                     </button>
                     <strong>$notification</strong>

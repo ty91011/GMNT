@@ -28,14 +28,20 @@ class Skybox
 	    $inventory->quantity = $inventoryItem['quantity'];
 	    $inventory->section = $inventoryItem['section'];
 	    $inventory->row = $inventoryItem['row'];
-	    $inventory->cost = round($inventoryItem['ticketPrice'] * (100+$markup)/100 * $inventoryItem['quantity'], 2);
-
+	    $inventory->cost = round($inventoryItem['ticketPrice'] * $inventoryItem['quantity'], 2);
+	    $inventory->listPrice = round($inventoryItem['ticketPrice'] * (100+$markup)/100, 2);
+	    $inventory->expectedValue = round($inventoryItem['ticketPrice'] * (100+$markup)/100, 2);
+	    $inventory->splitType = "NEVERLEAVEONE";
+	    $inventory->inHandDaysBeforeEvent = 1;
+	    $inventory->notes = $inventoryItem['id'];
+	    
 	    // Make up a seat number
-	    $inventory->lowSeat = $inventoryItem['id'] + 300;
+	    $inventory->lowSeat = rand(1,20000); //$inventoryItem['id'] + 100;
 	    $inventory->highSeat = $inventory->lowSeat + $inventory->quantity - 1;
 	    $inventory->stockType = "ELECTRONIC";
 	    $inventory->seatType = "CONSECUTIVE";
 	    $inventory->broadcast = false;
+	    $inventory->hideSeatNumbers = true;
 
 	    $eventMapping = new stdClass();
 	    $eventMapping->eventName = $event['name'];
@@ -50,15 +56,31 @@ class Skybox
 
 	    $purchase->lines[] = $line;
 	}
+	/*
 
 	echo "<pre>";
 	echo json_encode($purchase, JSON_PRETTY_PRINT);
-
+	die();
+	 * 
+	 */
 
 	$urlSuffix = "purchases";
 	$requestType = "POST";
 	$postFields = json_encode($purchase);
 	$out = self::apiRequest($urlSuffix, $requestType, $postFields);
+	
+	// Error
+	if(!$out)
+	{
+	    $notification = "Failed to upload " . count($inventoryIds) . " groups of tickets to Skybox";
+	    storeNotification("exportSkybox", $notification, "error");
+	}
+	else
+	{
+	    $notification = "Uploaded " . count($inventoryIds) . " groups of tickets to Skybox";
+	    insertHistory($event['tmId'], "Uploaded to Skybox", $notification);
+	    storeNotification("exportSkybox", $notification, "success");
+	}
 	
 	$skybox = json_decode($out);
 	foreach($skybox->lines AS $line)
@@ -75,12 +97,14 @@ class Skybox
     static function removeInventory($inventorySkyboxId)
     {
 	$urlSuffix = "inventory/$inventorySkyboxId/tickets";
-	self::apiRequest($urlSuffix, "DELETE", $postFields);
+	$result = self::apiRequest($urlSuffix, "DELETE", $postFields);
+	return $result;
     }
     
     static function apiRequest($urlSuffix, $requestType, $postFields)
     {
 	$uri = 'https://skybox.vividseats.com/services/' . $urlSuffix;
+	error_log("Hitting skybox $uri");
 	$ch = curl_init($uri);
 	curl_setopt_array($ch, array(
 	    CURLOPT_CUSTOMREQUEST => $requestType,
@@ -94,12 +118,22 @@ class Skybox
 		)  
 	));
 	$out = curl_exec($ch);
-	var_dump($out);
-	var_dump(curl_getinfo($ch, CURLINFO_HTTP_CODE));
-	print "<pre>";
-	$skybox = json_decode($out, true);
-	echo json_encode($skybox, JSON_PRETTY_PRINT);
+	
+	if(!curl_error($ch))
+	{
+	    switch($http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE))
+	    {
+		case 200: #ok
+		    error_log("Skybox responded ($http_code): $out");
+		    break;
+		default: #error
+		    error_log("Curl Error Response ($http_code): $out " . curl_error($ch));
+		    return false;
+	    }
+	}
+	
 	curl_close($ch);
+	
 	return $out;
     }
     

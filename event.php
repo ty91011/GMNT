@@ -34,6 +34,7 @@ if(isset($_POST['UPLOAD']) && $_POST['UPLOAD'] != '')
 if(isset($_POST['map']) && $_POST['sbId'] != '')
 {
     DB::query("UPDATE events SET sbId='$_POST[sbId]' WHERE tmId = '$eventId'");
+    insertHistory($eventId, "Mapped Event to Skybox", "Mapped event $eventid: $event[name] @ $event[venue] on $event[datetime]");
 }
 
 ?>
@@ -129,6 +130,7 @@ if(isset($_POST['map']) && $_POST['sbId'] != '')
 	    </div>
 	    <div class="x_panel">
                 <div class="row x_title">
+		    <?php showNotification("exportSkybox"); ?>
                     <div class="col-md-3">
                         <h3>Upload to Skybox</h3>
                     </div>
