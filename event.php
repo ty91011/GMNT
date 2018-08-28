@@ -29,6 +29,11 @@ $inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup
 if(isset($_POST['UPLOAD']) && $_POST['UPLOAD'] != '')
 {
     Skybox::uploadTickets($event, $maxPrice, $minGroups, $markup);
+    
+    // Get newly updated event
+    $event = getEvent($eventId);
+   
+    $inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup);
 }
 
 if(isset($_POST['map']) && $_POST['sbId'] != '')
