@@ -22,6 +22,13 @@ function getEvent($eventId, $force=false)
 	}
 	
 	$event = parseEventInfo($contents);
+	
+
+if($event['tmId'] === null)
+{
+   $string = preg_replace('/\s+/', '', $contents);
+    var_dump($string); die();
+}
 	// Insert Event into DB
         DB::insertUpdate("events", $event);
 	
@@ -324,6 +331,19 @@ function getOffers($contents)
     return $offers;
 }
 
+function getProxy()
+{
+    $ghostKey = "5b74c5bed80211534379454";
+    $proxyURL = "https://ghostproxies.com/proxies/api.json?key=$ghostKey";
+    $proxyJSON = file_get_contents($proxyURL);
+    $proxyList = json_decode($proxyJSON, true);
+    $proxyRand = array_rand($proxyList['data']);
+    $proxy = $proxyList['data'][$proxyRand]['Proxy'];
+    //$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
+    
+    return $proxy;
+}
+
 // Grab TM page
 function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
 {
@@ -343,22 +363,16 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
         $htmlURL = "https://www1.ticketmaster.com/event/$eventId?SREF=P_HomePageModule_main&f_PPL=true&ab=efeat5787v1";
 	$agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
 	
-	$ghostKey = "5b74c5bed80211534379454";
-	$proxyURL = "https://ghostproxies.com/proxies/api.json?key=$ghostKey";
-	$proxyJSON = file_get_contents($proxyURL);
-	$proxyList = json_decode($proxyJSON, true);
-	
-	$proxy = array_rand($proxyList['data']);
-	$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
-	
+	$proxy = getProxy();
+
 	error_log("Hitting $htmlURL to cache");
 	
 	$ch = curl_init();
 	
-        curl_setopt($ch, CURLOPT_PROXY, $proxy['ip']);
-        curl_setopt($ch, CURLOPT_PORT, $proxy['portNum']);
+        curl_setopt($ch, CURLOPT_PROXY, $proxy['ip'] . ":" . $proxy['portNum']);
+        // Weird setting to port 80 made it to go to 1080
+	//curl_setopt($ch, CURLOPT_PORT, $proxy['portNum']);
         curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy['panel_user'] . ":" . $proxy['panel_pass']);
-
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_VERBOSE, true);
@@ -373,12 +387,13 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
 	}
 	
        // $contents = file_get_contents($htmlURL); 
+	$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
 	
         $cacheContents = array(
             "type" => $eventPageType,
             "contents" => $contents,
             "tmId" => $eventId,
-	    "proxyUsed" => $proxy['ip']
+	    "proxyUsed" => $proxyIP
         );
         
         // Cache event page contents
@@ -403,21 +418,39 @@ function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="30 minute")
         
         $offersURL = "https://services.ticketmaster.com/api/ismds/event/$eventId/facets?q=available&by=shape+attributes+available+accessibility+offer+placeGroups+inventoryType+offerType+description&show=places&embed=description&resaleChannelId=internal.ecommerce.consumer.desktop.web.browser.ticketmaster.us&unlock=&apikey=$apiKey&apisecret=$apiSecret";
         //echo "Retrieving facets from $offersURL<br>";
-        error_log("Hitting $offersURL");
+	
+	error_log("Hitting $offersURL");
+	$contents = file_get_contents($offersURL);
+	
+        /*
         $agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
         
-        $ch = curl_init();
+	$proxy = getProxy();
+	
+        curl_setopt($ch, CURLOPT_PROXY, $proxy['ip']);
+        curl_setopt($ch, CURLOPT_PORT, $proxy['portNum']);
+        curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy['panel_user'] . ":" . $proxy['panel_pass']);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_VERBOSE, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, $agent);
         curl_setopt($ch, CURLOPT_URL,$offersURL);
+	curl_setopt($ch, CURLOPT_HEADER, array("X-Api-Key: $apiKey"));
         $contents = curl_exec($ch);
-        
+
+	if($contents == "")
+	{
+	    return false;
+	}
+        */
+	$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
+	
         $cacheContents = array(
             "type" => $eventPageType,
             "contents" => $contents,
-            "tmId" => $eventId
+            "tmId" => $eventId,
+	    "proxyUsed" => $proxyIP
         );
         
         // Cache event page contents
