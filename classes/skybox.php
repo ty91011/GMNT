@@ -3,7 +3,9 @@
 
 class Skybox
 {
-    const API_TOKEN = "2794461f-7da7-4c86-a27c-87e2ae79ebda";
+    const API_TOKEN = "8325a025-2a41-4f3d-bde7-92127cdcdec9";
+    
+    //const API_TOKEN = "02d81638-2f10-4d6f-83da-8d6e1b51a9bc";
     const ACCOUNT_ID = 3372;
     const DEFALUT_VENDOR_ID = 1283525;
     
