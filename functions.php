@@ -345,7 +345,7 @@ function getProxy()
 }
 
 // Grab TM page
-function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
+function getTMEventPage($eventId, &$fromCache=false, $cacheTime="6 hour")
 {
     $eventPageType = "eventPage";
     
@@ -403,7 +403,7 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="8 hour")
 }
 
 // Grab seat availability
-function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="30 minute")
+function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="6 hour")
 {
     $eventPageType = "availability";
     
