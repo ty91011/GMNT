@@ -1,15 +1,30 @@
 <?php
 
-include("include.php");
+include("meekrodb.2.3.class.php");
+include("functions.php");
 
-$events = DB::query("select * from events where datetime >= NOW()");
+// Classes
+include("classes/skybox.php");
 
+$events = DB::query("
+select tmId, lastCached
+FROM
+(
+select e.tmId, e.datetime, max(created) as lastCached from events e left join cached c on e.tmId=c.tmId
+group by e.tmId
+) a
+ where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 6 hour) 
+limit 50
+");
 error_log("BEGIN CRON AUTO CHECK");
 
 foreach($events AS $event)
 {
-    getEvent($event['tmId']);
+        echo "get event $event[tmId]";
+    $e =  getEvent($event['tmId']);
+unset($e);
     error_log("AUTO Checking event $event[tmId]");
 }
 
 ?>
+~    
