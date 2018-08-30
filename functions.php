@@ -38,7 +38,6 @@ if($event['tmId'] === null)
     // Grab all needed information from TM's page contents
     $event = populateEvent($event, $force);
 
-
     return $event;
 }
 
@@ -47,6 +46,9 @@ function populateEvent($event, $force=false)
     $eventId = $event['tmId'];
     
     $fromCache = false;
+    
+    $force = false;
+    
     if($force)
     {
 	$contents = getTMEventPage($eventId, $fromCache, "0 minute");
@@ -60,28 +62,42 @@ function populateEvent($event, $force=false)
     $offers = getOffers($contents);
 
     // Grab all seats in venue
-    $seats = getEventSeats($eventId);
+    $allSeats = getEventSeats($eventId);
 
     // Get TM API credentials
     $credentials = getCredentials($contents);	
 
     // Get available seats
-    $facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret']);
+    if($force)
+    {
+	$facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret'], "0 minute");
+    }
+    else
+    {
+	$facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret']);
+    }
+    
+    $availableSeats = array();
     foreach($facets AS $facet)
     {
-
 	foreach($facet['places'] AS $seatId)
 	{
-	    $seats[$seatId]['offer'] = $offers[$facet['offers'][0]];
+	    // Populate seat information
+	    $availableSeats[$seatId] = $allSeats[$seatId];
+	    
+	    // Populate seat offer information
+	    $availableSeats[$seatId]['offer'] = $offers[$facet['offers'][0]];
 	}
     }
 
+    // Remove not available seats from arena
+    
     $tickets = array();
 
-    foreach($seats AS $seatId => $seat)
+    foreach($availableSeats AS $seatId => $seat)
     {
-
-	if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
+	
+if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
 	{
 	    
 	    continue;
@@ -101,7 +117,7 @@ function populateEvent($event, $force=false)
 	    "offerType" => $seat['offer']['offerType']
 	);
     }
-    
+
     $event['tickets'] = $tickets;
 
     // Refresh all data sets
@@ -410,7 +426,7 @@ function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="6 hour")
     $result = DB::query("select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC");
     if(count($result))
     {
-        //echo "Retrieving availability from cache";
+        error_log("Retrieving availability from cache");
         $contents = $result[0]['contents'];
     }
     else 
