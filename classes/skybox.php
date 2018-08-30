@@ -35,7 +35,7 @@ class Skybox
 	    $inventory->expectedValue = round($inventoryItem['ticketPrice'] * (100+$markup)/100, 2);
 	    $inventory->splitType = "NEVERLEAVEONE";
 	    $inventory->inHandDaysBeforeEvent = 1;
-	    $inventory->inHandDate = date("d/m/y", strtotime($event['datetime'])-86400);
+	    //$inventory->inHandDate = date("d/m/y", strtotime($event['datetime'])-86400);
 	    $inventory->notes = $inventoryItem['id'];
 	    
 	    // Make up a seat number
