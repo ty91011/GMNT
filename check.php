@@ -14,7 +14,7 @@ select e.tmId, e.datetime, max(created) as lastCached from events e left join ca
 group by e.tmId
 ) a
  where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 6 hour) 
-limit 50
+limit 5
 ");
 error_log("BEGIN CRON AUTO CHECK");
 
