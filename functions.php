@@ -27,7 +27,7 @@ function getEvent($eventId, $force=false)
 if($event['tmId'] === null)
 {
    $string = preg_replace('/\s+/', '', $contents);
-    var_dump($string); die();
+
 }
 	// Insert Event into DB
         DB::insertUpdate("events", $event);
