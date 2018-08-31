@@ -1,38 +1,49 @@
 <?php
 include("include.php");
 
-$eventId = "0C0054ABD201AF59";
 
-$apiKey = "b462oi7fic6pehcdkzony5bxhe";
-$apiSecret = "pquzpfrfz7zd2ylvtz3w5dtyse";
+$mysqli = mysqli_connect("db.gmntt.com", "gmntt", "Chester123!@#", "gmntt");
+if ($mysqli->connect_errno) {
+    printf("Connect failed: %s\n", $mysqli->connect_error);
+    exit();
+}
 
-        $htmlURL = "https://www1.ticketmaster.com/event/$eventId?SREF=P_HomePageModule_main&f_PPL=true&ab=efeat5787v1";
-	
-	echo $htmlURL;
-	$agent= 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)';
-	
-	$proxy = getProxy();
-	
-var_dump($proxy);
-	error_log("Hitting $htmlURL to cache");
-	
-	$ch = curl_init();
-        curl_setopt($ch, CURLOPT_PROXY, $proxy['ip'] . ":$proxy[portNum]");
-        //curl_setopt($ch, CURLOPT_PORT, 80);
-        curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy['panel_user'] . ":" . $proxy['panel_pass']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_USERAGENT, $agent);
-        curl_setopt($ch, CURLOPT_URL,$htmlURL);
-        $contents = curl_exec($ch);
+$res = mysqli_query($mysqli, "set @row_number:=1");
+$res = mysqli_query($mysqli, "set @section := '1'");
+$res = mysqli_query($mysqli, "
+select * from ( select *, @row_number :=CASE when @section = section then @row_number+1 else 1 end as a, @section := section from inventory where tmId='0C005381C20D3841' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' and ticketPrice <= 1000000 and availability >= 2 order by section asc, row asc ) t1 where a <= 2 order by section asc, row asc;
+");
+echo "<pre>";
+var_dump($res->num_rows);
+while($row = $res->fetch_assoc())
+{
+    var_dump($row);
+}
 
-	var_dump(curl_errno($ch));
-	var_dump(curl_error($ch));
-	var_dump($contents);
-	die();
+die();
 
+$res = mysqli_multi_query($mysqli, "set @row_number:=1; set @section := '1'; 
+select * from ( select *, @row_number :=CASE when @section = section then @row_number+1 else 1 end as a, @section := section from inventory where tmId='0C005381C20D3841' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' and ticketPrice <= 1000000 and availability >= 2 order by section asc, row asc ) t1 where a <= 2 order by section asc, row asc;
+");
+
+    do {
+        /* store first result set */
+        if ($result = $mysqli->store_result()) {
+            while ($row = $result->fetch_assoc()) {
+		$counter++;
+                echo "Section $row[section] $row[row]<br>";
+            }
+	    echo "counter : " . $counter;
+            $result->free();
+        }
+        /* print divider */
+        if ($mysqli->more_results()) {
+            printf("<br>-----<br>");
+        }
+    } while ($mysqli->next_result());
+
+
+die();
 	
 	
 	

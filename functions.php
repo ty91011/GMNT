@@ -122,7 +122,7 @@ if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($sea
 
     // Refresh all data sets
     // TODO GET RID OF TRUE
-    if(!$fromCache || true)
+    if(!$fromCache || $force)
     {
 	updateInventory($eventId, $tickets);
     }
@@ -518,20 +518,40 @@ function getEventSeats($eventId)
     return $seats;
 }
 
-function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup)
+function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows)
 {
     // Build query
     $parameters = "";
     $parameters .= " and ticketPrice <= $maxPrice and availability >= $minGroups ";
 
-
-    $query = "SELECT * "
-	    . "FROM inventory "
-	    . "WHERE tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' and tmId='$eventId'
-" . $parameters
-	    . "ORDER BY section asc, row asc ";
+    $query = "
+	select * 
+	from
+	(
+	    select *, @row_number :=CASE when @section = section then @row_number+1 else 1 end as a, @section := section 
+	    from inventory 
+	    where tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' $parameters
+	    order by section asc, row asc
+	) t1
+	where a <= $maxRows
+	order by section asc, row asc
+     ";
     
-    $inventory = DB::query($query);   
+    $mysqli = mysqli_connect("db.gmntt.com", "gmntt", "Chester123!@#", "gmntt");
+    if ($mysqli->connect_errno) {
+	printf("Connect failed: %s\n", $mysqli->connect_error);
+	exit();
+    }
+
+    $res = mysqli_query($mysqli, "set @row_number:=1");
+    $res = mysqli_query($mysqli, "set @section := '1'");
+    $res = mysqli_query($mysqli, $query);
+
+    $inventory = array();
+    while($row = $res->fetch_assoc())
+    {
+	$inventory[] = $row;
+    }
 
     return $inventory;
 }

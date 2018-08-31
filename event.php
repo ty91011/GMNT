@@ -21,19 +21,21 @@ $markup =  isset($_POST['markup']) && $_POST['markup'] != '' ? $_POST['markup'] 
 $minGroups = isset($_POST['minGroups']) && $_POST['minGroups'] != '' ? $_POST['minGroups'] : "2";
 $minPrice = isset($_POST['minPrice']) && $_POST['minPrice'] != '' ? $_POST['minPrice'] : "0";
 $maxPrice = isset($_POST['maxPrice']) && $_POST['maxPrice'] != '' ? $_POST['maxPrice'] : "1000000";
+$maxRows = isset($_POST['maxRows']) && $_POST['maxRows'] != '' ? $_POST['maxRows'] : "2";
 
 $event = getEvent($eventId);
    
-$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup);
+$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
+
 
 if(isset($_POST['UPLOAD']) && $_POST['UPLOAD'] != '')
 {
-    Skybox::uploadTickets($event, $maxPrice, $minGroups, $markup);
+    Skybox::uploadTickets($event, $maxPrice, $minGroups, $markup, $maxRows);
     
     // Get newly updated event
     $event = getEvent($eventId);
    
-    $inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup);
+    $inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
 }
 
 if(isset($_POST['map']) && $_POST['sbId'] != '')
