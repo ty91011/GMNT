@@ -13,18 +13,25 @@ FROM
 select e.tmId, e.datetime, max(created) as lastCached from events e left join cached c on e.tmId=c.tmId
 group by e.tmId
 ) a
- where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 1 hour) 
+ where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 1 minute) 
  order by lastCached DESC
-limit 5
+limit 25
 ");
 error_log("BEGIN CRON AUTO CHECK");
 
+ob_end_flush();
+  ob_implicit_flush();
+
 foreach($events AS $event)
 {
+    echo "begin event: "; echo_memory_usage();
         echo "get event $event[tmId]";
     $e =  getEvent($event['tmId']);
     unset($e['tickets']);
 unset($e);
+echo "unset event: "; echo_memory_usage();
+gc_collect_cycles();
+echo "gc collect: "; echo_memory_usage();
     error_log("AUTO Checking event $event[tmId]");
 }
 

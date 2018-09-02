@@ -57,7 +57,7 @@ function populateEvent($event, $force=false)
     {
 	$contents = getTMEventPage($eventId, $fromCache);
     }
-
+    
     // Grab all offers for event
     $offers = getOffers($contents);
 
@@ -90,6 +90,9 @@ function populateEvent($event, $force=false)
 	}
     }
 
+    unset($facets);
+
+    
     // Remove not available seats from arena
     
     $tickets = array();
@@ -119,6 +122,9 @@ if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($sea
     }
 
     $event['tickets'] = $tickets;
+
+unset($allSeats);
+unset($availableSeats);
 
     // Refresh all data sets
     // TODO GET RID OF TRUE
@@ -512,6 +518,8 @@ function getEventSeats($eventId)
         }
     }
 
+    unset($segments);
+    
     unset($seats['pages']);
     unset($seats['totalPlaces']);
     unset($seats['venueConfigId']);
@@ -589,3 +597,16 @@ function deleteNotification($type)
 {
     unset($_SESSION['notifications'][$type]);
 }
+
+    function echo_memory_usage() { 
+        $mem_usage = memory_get_usage(true); 
+        
+        if ($mem_usage < 1024) 
+            echo $mem_usage." bytes"; 
+        elseif ($mem_usage < 1048576) 
+            echo round($mem_usage/1024,2)." kilobytes"; 
+        else 
+            echo round($mem_usage/1048576,2)." megabytes"; 
+            
+        echo "<br/>\n"; 
+    } 
