@@ -487,6 +487,7 @@ function getEventSeats($eventId)
     error_log("Hitting $url");
 
     $seats = json_decode($geometry, true);
+    unset($geometry);
     
     $segments = $seats['pages'][0]['segments'];
 

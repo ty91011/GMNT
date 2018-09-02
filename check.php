@@ -14,6 +14,7 @@ select e.tmId, e.datetime, max(created) as lastCached from events e left join ca
 group by e.tmId
 ) a
  where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 1 hour) 
+ order by lastCached DESC
 limit 5
 ");
 error_log("BEGIN CRON AUTO CHECK");
@@ -22,6 +23,7 @@ foreach($events AS $event)
 {
         echo "get event $event[tmId]";
     $e =  getEvent($event['tmId']);
+    unset($e['tickets']);
 unset($e);
     error_log("AUTO Checking event $event[tmId]");
 }
