@@ -492,11 +492,14 @@ function getEventSeats($eventId)
     $geometry = file_get_contents("https://mapsapi.tmol.io/maps/geometry/3/event/$eventId/placeDetailNoKeys?systemId=HOST&useHostGrids=true&app=CCP");
     error_log("Hitting $url");
 
-    $seats = json_decode($geometry, true);
+    $seats = array();
+    $seatsJSON = json_decode($geometry, true);
     unset($geometry);
     
-    $segments = $seats['pages'][0]['segments'];
-
+    $segments = $seatsJSON['pages'][0]['segments'];
+    unset($seatsJSON);
+    $seatsJSON = null;
+    
     foreach($segments AS $outerSection)
     {
         if(is_array($outerSection['segments']))
