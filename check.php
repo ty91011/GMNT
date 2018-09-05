@@ -5,17 +5,18 @@ include("functions.php");
 
 // Classes
 include("classes/skybox.php");
+include("classes/constants.php");
 
 $events = DB::query("
-select tmId, lastCached
+select tmId, lastCached, cacheTime
 FROM
 (
-select e.tmId, e.datetime, max(created) as lastCached from events e left join cached c on e.tmId=c.tmId
+select e.tmId, e.datetime, max(created) as lastCached, e.cacheTime from events e left join cached c on e.tmId=c.tmId
 group by e.tmId
 ) a
- where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 15 minute) 
+ where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL cacheTime minute) 
  order by lastCached ASC
-limit 10
+limit 25
 ");
 error_log("BEGIN CRON AUTO CHECK");
 

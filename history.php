@@ -31,7 +31,7 @@ include("include.php");
 		    {
 			echo "<tr>
 			    <td>$result[lastUpdated]</td>
-			    <td>$result[name]</td>
+			    <td>$result[name]<br>$result[tmId]</td>
 			    <td>$result[venue]</td>
 			    <td>$result[type]</td>
 			    <td>$result[status]</td>
