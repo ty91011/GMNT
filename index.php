@@ -2,6 +2,12 @@
 
 include("include.php");
 
+if(isset($_POST['cache']) && isset($_POST['tmId']) && isset($_POST['cacheTime']))
+{
+    DB::update("events", array("cacheTime" => $_POST['cacheTime']), "tmId='$_POST[tmId]'");
+    insertHistory($_POST['tmId'], "CACHE TIME", "Changed cache time to $_POST[cacheTime] minutes");
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

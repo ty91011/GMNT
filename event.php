@@ -16,6 +16,7 @@ else
     $eventId = "0B00546E63D3145E";
 }
 
+
 // Defaults
 $markup =  isset($_POST['markup']) && $_POST['markup'] != '' ? $_POST['markup'] : "20";
 $minGroups = isset($_POST['minGroups']) && $_POST['minGroups'] != '' ? $_POST['minGroups'] : "2";
@@ -23,7 +24,9 @@ $minPrice = isset($_POST['minPrice']) && $_POST['minPrice'] != '' ? $_POST['minP
 $maxPrice = isset($_POST['maxPrice']) && $_POST['maxPrice'] != '' ? $_POST['maxPrice'] : "1000000";
 $maxRows = isset($_POST['maxRows']) && $_POST['maxRows'] != '' ? $_POST['maxRows'] : "2";
 
-$event = getEvent($eventId);
+
+// Force event refresh
+$event = getEvent($eventId, true);
    
 $inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
 

@@ -336,6 +336,7 @@ class MeekroDB {
           str_replace('%', $this->param_char, "INSERT INTO %b %lb VALUES %? ON DUPLICATE KEY UPDATE ") . $update_str, 
           $table, $keys, $values);
         $query_param = array_merge($query_param, $options['update']);
+
         return call_user_func_array(array($this, 'query'), $query_param);
       }
       

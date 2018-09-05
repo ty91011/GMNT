@@ -1,4 +1,4 @@
-                        <table id="datatable" class="table table-striped table-bordered">
+                        <table id="datatable" class="table table-striped table-bordered" data-page-length='25'>
                               <thead>
                                 <tr>
 				    <th>Edit</th>
@@ -11,7 +11,7 @@
                                   <th>Average Price</th>
                                   <th>Skybox</th>
 				  
-				  <th>Last Updated</th>
+				  <th>Last Cached</th>
                                 </tr>
                               </thead>
 
@@ -19,7 +19,7 @@
                               <tbody>
                                 <?php
 
-                                $events = DB::query("SELECT e.*, coalesce(num, 0) as num, coalesce(avgPrice, 'NA') avgPrice, coalesce(skybox, 0) skybox, coalesce(tickets, 0) tickets, coalesce(rows, 0) rows, coalesce(platinum,0) platinum
+                                $events = DB::query("SELECT e.*, coalesce(num, 0) as num, coalesce(avgPrice, 'NA') avgPrice, coalesce(skybox, 0) skybox, coalesce(tickets, 0) tickets, coalesce(rows, 0) rows, coalesce(platinum,0) platinum, case when datetime > NOW() then 1 else 0 end as future, case when datetime > NOW() and datetime < date_add(NOW(), interval 4 day) then 1 else 0 end as critical
 						    FROM events e 
 							    left join 
 							    (
@@ -36,10 +36,17 @@
 							    ) t
 							    ON e.tmId = t.tmId
 						    GROUP BY e.id
-						    ORDER BY e.id DESC");
+						    ORDER BY future desc, critical desc, skybox desc, e.id DESC");
                                 foreach($events AS $event)
                                 {
 				    $timeTilEvent = floor((strtotime($event['datetime']) - time())/86400) . " days";
+				    
+				    $criticalDays = constants::CRITICAL_DAYS_TIL_EVENT;
+				    $criticalAvailablePercentage = constants::CRITICAL_AVAILABILITY;
+				    
+				    $daysStyle = floor((strtotime($event['datetime']) - time())/86400) <= $criticalDays ? "style='border: 3px solid red'" : "";
+				    $skyboxStyle = $event['skybox'] > 0 &&  $event['skybox'] / $event['num'] > $criticalAvailablePercentage ? "style='border: 3px solid red'" : "";
+
 				    if($event['platinum'] > 0)
 				    {
 					$platinum = "<br>$event[platinum] platinum tickets available!";
@@ -57,12 +64,13 @@
 				    echo " </td>
                                         <td>$event[name]$platinum</td>
                                         <td>$event[venue]<br>$event[date]</td>
-                                        <td>$timeTilEvent</td>
+                                        <td $daysStyle>$timeTilEvent</td>
                                         <td>$event[num] groups<br>in $event[rows] rows<br>out of $event[tickets] tickets</td>
                                         <td>$event[avgPrice]</td>
-                                        <td>$event[skybox]</td>
+                                        <td $skyboxStyle>$event[skybox]</td>
 					
-					    <td>$event[lastUpdated]</td>
+					    <td>$event[lastCached]<br>
+					    <form method=POST><input type=hidden name=tmId value='$event[tmId]'><input type=text size='3' name=cacheTime value='$event[cacheTime]'> minutes <input name='cache' type=submit value='Change'></form></td>
                                     </tr>
                                     ";
                                 }

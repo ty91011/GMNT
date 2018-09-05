@@ -5,9 +5,13 @@ function getEvent($eventId, $force=false)
     $result = DB::query("SELECT * FROM events WHERE tmId='$eventId'");
     if(count($result))
     {
+
 	$event = $result[0];
+	/*
 	$tickets = DB::query("SELECT * FROM tickets WHERE tmId='$eventId'");
 	$event['tickets'] = $tickets;
+	 * 
+	 */
     }
     // Event does not exist yet
     else
@@ -18,23 +22,26 @@ function getEvent($eventId, $force=false)
 	// Invalid Event or cannot retrieve TM page
 	if(!$contents)
 	{
+	    error_log("could not retrieve event id: $eventId");
 	    return false;
 	}
 	
 	$event = parseEventInfo($contents);
 	
 
-if($event['tmId'] === null)
-{
-   $string = preg_replace('/\s+/', '', $contents);
+	if($event['tmId'] === null)
+	{
+	   $string = preg_replace('/\s+/', '', $contents);
 
-}
+	}
 	// Insert Event into DB
-        DB::insertUpdate("events", $event);
-	
+	DB::insertUpdate("events", $event);
 	insertHistory($eventId, "New Event Added", "Added <strong>$event[name]</strong> @ $event[venue] on $event[datetime]");
+	
+	unset($contents);
+	$contents = null;
     }
-    
+
     // Grab all needed information from TM's page contents
     $event = populateEvent($event, $force);
 
@@ -47,16 +54,8 @@ function populateEvent($event, $force=false)
     
     $fromCache = false;
     
-    $force = false;
-    
-    if($force)
-    {
-	$contents = getTMEventPage($eventId, $fromCache, "0 minute");
-    }
-    else
-    {
-	$contents = getTMEventPage($eventId, $fromCache);
-    }
+    $contents = getTMEventPage($eventId, $fromCache, $force);
+
     
     // Grab all offers for event
     $offers = getOffers($contents);
@@ -68,15 +67,8 @@ function populateEvent($event, $force=false)
     $credentials = getCredentials($contents);	
 
     // Get available seats
-    if($force)
-    {
-	$facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret'], "0 minute");
-    }
-    else
-    {
-	$facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret']);
-    }
-    
+    $facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret'], $force);
+
     $availableSeats = array();
     foreach($facets AS $facet)
     {
@@ -91,18 +83,17 @@ function populateEvent($event, $force=false)
     }
 
     unset($facets);
+    $facets = null;
 
     
     // Remove not available seats from arena
-    
     $tickets = array();
 
     foreach($availableSeats AS $seatId => $seat)
     {
 	
-if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
+	if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
 	{
-	    
 	    continue;
 	}
 
@@ -123,11 +114,12 @@ if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($sea
 
     $event['tickets'] = $tickets;
 
-unset($allSeats);
-unset($availableSeats);
+    unset($allSeats);
+    $allSeats = null;
+    unset($availableSeats);
+    $availableSeats = null;
 
     // Refresh all data sets
-    // TODO GET RID OF TRUE
     if(!$fromCache || $force)
     {
 	updateInventory($eventId, $tickets);
@@ -154,10 +146,7 @@ function updateInventory($eventId, $tickets = array())
             // Do nothing
         }
         else
-        {
-            // Do something
-            //echo "INVALID $dbRow[section]:$dbRow[row]<br>";
-            
+        {        
             DB::query("UPDATE inventory SET skyboxStatus='PENDING SKYBOX REMOVAL' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
             
 	    insertHistory($eventId, "PENDING SKYBOX REMOVAL", "Section $dbRow[section] and Row $dbRow[row]");
@@ -195,8 +184,8 @@ function insertHistory($tmId, $type, $status)
 	"tmId" => $tmId
     );
     DB::insertIgnore("history", $history);
+    error_log("HISTORY LOG for $tmId: ($type) $status");
 }
-
 
 function getValidRows($eventId, $tickets = array(), $consecutiveCount = 4, $minGroupsThreshold = 2)
 {
@@ -304,7 +293,8 @@ function parseEventInfo($contents)
         "date" => $event['formattedDateFull'],
         "datetime" => date("Y-m-d H:i:s", strtotime($event['seoEventDate'])),
         "lastUpdated" => date("Y-m-d H:i:s", time()),
-        "contents" => $contents
+        "contents" => $contents,
+	"cacheTime" => constants::DEFAULT_CACHE_TIME_MINUTES
     );
 
     return $event;
@@ -367,14 +357,15 @@ function getProxy()
 }
 
 // Grab TM page
-function getTMEventPage($eventId, &$fromCache=false, $cacheTime="1 hour")
+function getTMEventPage($eventId, &$fromCache=false, $force=false)
 {
     $eventPageType = "eventPage";
     
    // Try to find most recent cache within $cacheTime
-    $query = "select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC";
+    //$query = "select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC";
+    $query = "select c.contents from cached c left join events e on c.tmId=e.tmId where c.tmId='$eventId' and type='$eventPageType'and created > NOW() - interval e.cacheTime minute ORDER BY created DESC";
     $result = DB::query($query);
-    if(count($result))
+    if(count($result) && !$force)
     {
         error_log("Event $eventId: Retrieving from cache");
         $contents = $result[0]['contents'];
@@ -405,6 +396,7 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="1 hour")
 
 	if($contents == "")
 	{
+
 	    return false;
 	}
 	
@@ -417,20 +409,27 @@ function getTMEventPage($eventId, &$fromCache=false, $cacheTime="1 hour")
             "tmId" => $eventId,
 	    "proxyUsed" => $proxyIP
         );
-        
+	
         // Cache event page contents
         DB::insert("cached", $cacheContents);
+
+	// Update last cached time
+	$lastCached = date("Y-m-d H:i:s");
+	DB::update("events", array('lastCached' => $lastCached), "tmId='$eventId'");
     }
     return $contents;
 }
 
 // Grab seat availability
-function getFacets($eventId, $apiKey, $apiSecret, $cacheTime="1 hour")
+function getFacets($eventId, $apiKey, $apiSecret, $force=false)
 {
     $eventPageType = "availability";
     
-    $result = DB::query("select contents from cached where tmId='$eventId' and type='$eventPageType'and created > NOW() - interval $cacheTime ORDER BY created DESC");
-    if(count($result))
+    $query = "select c.contents from cached c left join events e on c.tmId=e.tmId where c.tmId='$eventId' and type='$eventPageType'and created > NOW() - interval e.cacheTime minute ORDER BY created DESC";
+    
+    $result = DB::query($query);
+    
+    if(count($result) && !$force)
     {
         error_log("Retrieving availability from cache");
         $contents = $result[0]['contents'];

@@ -15,7 +15,7 @@ group by e.tmId
 ) a
  where datetime >= NOW() and lastCached <= date_sub(now(), INTERVAL 15 minute) 
  order by lastCached ASC
-limit 5
+limit 10
 ");
 error_log("BEGIN CRON AUTO CHECK");
 
