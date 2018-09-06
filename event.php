@@ -45,6 +45,8 @@ if(isset($_POST['map']) && $_POST['sbId'] != '')
 {
     DB::query("UPDATE events SET sbId='$_POST[sbId]' WHERE tmId = '$eventId'");
     insertHistory($eventId, "Mapped Event to Skybox", "Mapped event $eventid: $event[name] @ $event[venue] on $event[datetime]");
+    
+    VividSeats::importComps($sbId, $eventId);
 }
 
 ?>
@@ -178,6 +180,8 @@ if(isset($_POST['map']) && $_POST['sbId'] != '')
 					//echo $query;
 					foreach($inventory AS $inventoryItem)
 					{
+					    $vivid = $inventoryItem['vividPrice'] > 0 ? "<br>(V) $inventoryItem[vividPrice]" : "";
+
 					    echo "
 					    <tr>
 						<td class='a-center '>
@@ -187,7 +191,7 @@ if(isset($_POST['map']) && $_POST['sbId'] != '')
 						<td>$inventoryItem[row]</td>
 						<td>$inventoryItem[ticketPrice]</td>
 						<td>" . round($inventoryItem[ticketPrice] * $markup/100, 2) . "</td>
-						<td>" . ($inventoryItem['ticketPrice'] + round($inventoryItem['ticketPrice'] * $markup/100, 2)) . "</td>
+						<td>" . ($inventoryItem['ticketPrice'] + round($inventoryItem['ticketPrice'] * $markup/100, 2)) . $vivid . "</td>
 						<td>$inventoryItem[availability]</td>
 						<td>$inventoryItem[seatFroms]</td>
 						<td>$inventoryItem[lastUpdated]</td>

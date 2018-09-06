@@ -55,7 +55,11 @@ function populateEvent($event, $force=false)
     $fromCache = false;
     
     $contents = getTMEventPage($eventId, $fromCache, $force);
-
+    if(!$contents)
+    {
+	error_log("error with getting TM Event Page: $eventId");
+	return false;
+    }
     
     // Grab all offers for event
     $offers = getOffers($contents);
@@ -69,6 +73,12 @@ function populateEvent($event, $force=false)
     // Get available seats
     $facets = getFacets($eventId, $credentials['apiKey'], $credentials['apiSecret'], $force);
 
+    if(!$facets)
+    {
+	error_log("error with getting TM facets Page: $eventId");
+	return false;
+    }
+    
     $availableSeats = array();
     foreach($facets AS $facet)
     {
@@ -150,7 +160,7 @@ function updateInventory($eventId, $tickets = array())
             DB::query("UPDATE inventory SET skyboxStatus='PENDING SKYBOX REMOVAL' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
             
 	    insertHistory($eventId, "PENDING SKYBOX REMOVAL", "Section $dbRow[section] and Row $dbRow[row]");
-	    
+
             // Take down from Skybox
             if(SkyBox::removeInventory($dbRow['sbId']) !== false)
 	    {            
@@ -283,6 +293,12 @@ function parseEventInfo($contents)
 {
     $matches = array();
     preg_match("/storeUtils\['eventJSONData']=(\{.*\})/", $contents, $matches);
+    
+    // Not valid TM event contents page
+    if(count($matches) == 0)
+    {
+	return false;
+    }
     $event = json_decode($matches[1], true);
 
     $event = array(
@@ -394,9 +410,9 @@ function getTMEventPage($eventId, &$fromCache=false, $force=false)
         curl_setopt($ch, CURLOPT_URL,$htmlURL);
         $contents = curl_exec($ch);
 
-	if($contents == "")
+	if($contents == "" || !parseEventInfo($contents))
 	{
-
+	    error_log("ERROR RETRIEVING TM EVENT PAGE for $eventId with Proxy $proxy[ip]: $contents");
 	    return false;
 	}
 	
@@ -459,12 +475,12 @@ function getFacets($eventId, $apiKey, $apiSecret, $force=false)
         curl_setopt($ch, CURLOPT_URL,$offersURL);
 	curl_setopt($ch, CURLOPT_HEADER, array("X-Api-Key: $apiKey"));
         $contents = curl_exec($ch);
-
+	*/
 	if($contents == "")
 	{
 	    return false;
 	}
-        */
+        
 	$proxyIP = $proxy['panel_user'] . ":" . $proxy['panel_pass'] . "@" . $proxy['ip'] . ":" . $proxy['portNum'];
 	
         $cacheContents = array(
@@ -536,18 +552,18 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
     $parameters .= " and ticketPrice <= $maxPrice and availability >= $minGroups ";
 
     $query = "
-	select * 
+	select t1.*, t2.price as vividPrice
 	from
 	(
 	    select *, @row_number :=CASE when @section = section then @row_number+1 else 1 end as a, @section := section 
 	    from inventory 
 	    where tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' $parameters
 	    order by section asc, row asc
-	) t1
+	) t1  left join vividComps t2 on t1.tmId=t2.tmId and t1.section=t2.section and t1.row=t2.row
 	where a <= $maxRows
-	order by section asc, row asc
+	order by t1.section asc, t1.row asc
      ";
-    
+
     $mysqli = mysqli_connect("db.gmntt.com", "gmntt", "Chester123!@#", "gmntt");
     if ($mysqli->connect_errno) {
 	printf("Connect failed: %s\n", $mysqli->connect_error);

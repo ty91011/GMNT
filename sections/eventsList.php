@@ -35,6 +35,7 @@
 							    	group by tmId
 							    ) t
 							    ON e.tmId = t.tmId
+						    WHERE e.datetime > NOW()
 						    GROUP BY e.id
 						    ORDER BY future desc, critical desc, skybox desc, e.id DESC");
                                 foreach($events AS $event)

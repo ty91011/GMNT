@@ -24,6 +24,9 @@ include("meekrodb.2.3.class.php");
 // Classes
 include("classes/skybox.php");
 include("classes/constants.php");
+include("classes/proxies.php");
+include("classes/vividseats.php");
+
 
 include("functions.php");
 
