@@ -40,7 +40,7 @@ class VividSeats
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 	
 	$out = curl_exec($ch);
-	
+
 	$json = json_decode($out);
 
 	$out = null;

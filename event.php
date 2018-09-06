@@ -28,7 +28,15 @@ $maxRows = isset($_POST['maxRows']) && $_POST['maxRows'] != '' ? $_POST['maxRows
 // Force event refresh
 $event = getEvent($eventId, true);
    
-$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
+if(isset($_POST['map']) && $_POST['sbId'] != '')
+{
+    DB::query("UPDATE events SET sbId='$_POST[sbId]' WHERE tmId = '$eventId'");
+    insertHistory($eventId, "Mapped Event to Skybox", "Mapped event $eventid: $event[name] @ $event[venue] on $event[datetime]");
+    
+    VividSeats::importComps($_POST[sbId], $eventId);
+}
+
+
 
 
 if(isset($_POST['UPLOAD']) && $_POST['UPLOAD'] != '')
@@ -37,17 +45,10 @@ if(isset($_POST['UPLOAD']) && $_POST['UPLOAD'] != '')
     
     // Get newly updated event
     $event = getEvent($eventId);
-   
-    $inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
+
 }
 
-if(isset($_POST['map']) && $_POST['sbId'] != '')
-{
-    DB::query("UPDATE events SET sbId='$_POST[sbId]' WHERE tmId = '$eventId'");
-    insertHistory($eventId, "Mapped Event to Skybox", "Mapped event $eventid: $event[name] @ $event[venue] on $event[datetime]");
-    
-    VividSeats::importComps($sbId, $eventId);
-}
+$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
 
 ?>
 
