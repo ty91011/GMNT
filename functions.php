@@ -146,6 +146,8 @@ function updateInventory($eventId, $tickets = array())
     
     $validRows = getValidRows($eventId, $tickets);
 
+    $noRemoval = true;
+    
     // Check for now invalid rows that are already on Skybox
     $dbRows = DB::query("SELECT id, sbId, section, row from inventory where tmId='$eventId' and skyboxStatus='ON SKYBOX'");
     foreach($dbRows AS $dbRow)
@@ -153,10 +155,18 @@ function updateInventory($eventId, $tickets = array())
         // There is corresponding section/row pair in valid row in the dbRows
         if(isset($validRows[$dbRow['section']][$dbRow['row']]))
         {
+	    error_log("Validated section $dbRow[section] row $dbRow[row]");
             // Do nothing
         }
         else
-        {        
+        {   
+	    error_log("Invalidated section $dbRow[section] row $dbRow[row]");
+	    if($noRemoval)
+	    {
+		error_log("XXX SET FOR REMOVAL ----");
+		error_log(json_encode($validRows));
+		$noRemoval = false;
+	    }
             DB::query("UPDATE inventory SET skyboxStatus='PENDING SKYBOX REMOVAL' WHERE section='$dbRow[section]' and row='$dbRow[row]' and tmId='$eventId'");
             
 	    insertHistory($eventId, "PENDING SKYBOX REMOVAL", "Section $dbRow[section] and Row $dbRow[row]");
