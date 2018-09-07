@@ -423,6 +423,7 @@ function getTMEventPage($eventId, &$fromCache=false, $force=false)
 	if($contents == "" || !parseEventInfo($contents))
 	{
 	    error_log("ERROR RETRIEVING TM EVENT PAGE for $eventId with Proxy $proxy[ip]: $contents");
+	    insertHistory($eventId, "PROXY DISTIL", "$proxy[ip]:$proxy[portnum]");
 	    return false;
 	}
 	
