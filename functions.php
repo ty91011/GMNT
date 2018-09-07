@@ -559,7 +559,7 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
 	    from inventory 
 	    where tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' $parameters
 	    order by section asc, row asc
-	) t1  left join vividComps t2 on t1.tmId=t2.tmId and t1.section=t2.section and t1.row=t2.row
+	) t1  left join (select tmId, section, row, min(price) as price from vividComps group by tmId, section, row) t2 on t1.tmId=t2.tmId and t1.section=t2.section and t1.row=t2.row
 	where a <= $maxRows
 	order by t1.section asc, t1.row asc
      ";
