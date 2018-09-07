@@ -5,12 +5,12 @@ error_reporting(E_ALL ^ E_NOTICE ^E_WARNING);
 
 $path = realpath(dirname(__FILE__));
 
-include($path . "meekrodb.2.3.class.php");
-include($path . "functions.php");
+include($path . "/meekrodb.2.3.class.php");
+include($path . "/functions.php");
 
 // Classes
-include($path . "classes/skybox.php");
-include($path . "classes/constants.php");
+include($path . "/classes/skybox.php");
+include($path . "/classes/constants.php");
 
 $events = DB::query("
 select tmId, lastCached, cacheTime
