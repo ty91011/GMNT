@@ -26,7 +26,8 @@ if(isset($_POST['importEventIds']))
     // Update tour info for events
     if(isset($_POST['tour']))
     {
-	$query = "UPDATE events SET tour=$tour WHERE tmId IN (" . implode(",", $parts);
+	$tour = str_replace("'", "''", $_POST['tour']);
+	$query = "UPDATE events SET tour='$tour' WHERE tmId IN ('" . implode("','", $parts) . "')";
 	DB::query($query);
     }
     
