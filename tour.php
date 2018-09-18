@@ -16,6 +16,12 @@ else
     $tour = "Taylor Swift - Reputation Stadium Tour";
 }
 
+if(isset($_POST['cache']) && isset($_POST['tmId']) && isset($_POST['cacheTime']))
+{
+    DB::update("events", array("cacheTime" => $_POST['cacheTime']), "tmId='$_POST[tmId]'");
+    insertHistory($_POST['tmId'], "CACHE TIME", "Changed cache time to $_POST[cacheTime] minutes");
+}
+
 // Defaults
 $markup =  isset($_POST['markup']) && $_POST['markup'] != '' ? $_POST['markup'] : "20";
 $minGroups = isset($_POST['minGroups']) && $_POST['minGroups'] != '' ? $_POST['minGroups'] : "2";
@@ -71,6 +77,15 @@ group by tour");
                 </div>
 
 	    </div>
+	                <div class="x_panel">
+              <div class="row">
+                  <div class="col-md-12 col-sm-12 col-xs-12">
+                      <div class="x_content">
+			    <?php include("sections/tourEventsList.php"); ?>
+			</div>
+                </div>
+            </div>
+          </div>
 	    <div class="x_panel">
                 <div class="row x_title">
 		    <?php showNotification("exportSkybox"); ?>
