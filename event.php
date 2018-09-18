@@ -26,8 +26,10 @@ $maxRows = isset($_POST['maxRows']) && $_POST['maxRows'] != '' ? $_POST['maxRows
 
 
 // Force event refresh
-$event = getEvent($eventId, true);
+//$event = getEvent($eventId, true);
    
+$event = getEvent($eventId);
+
 if(isset($_POST['map']) && $_POST['sbId'] != '')
 {
     DB::query("UPDATE events SET sbId='$_POST[sbId]' WHERE tmId = '$eventId'");

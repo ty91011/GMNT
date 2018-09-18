@@ -97,6 +97,97 @@ class Skybox
 
     }
     
+        // Start SKYBOX functionality
+    static function uploadTourTickets($tour, $maxPrice, $minGroups, $markup, $maxRows)
+    {
+	$inventory = getFilteredTourInventory($tour, $maxPrice, $minGroups, $markup, $maxRows);
+
+	$purchase = new stdClass();
+	$purchase->vendorId = self::DEFALUT_VENDOR_ID;
+	$purchase->lines = array();
+
+	$inventoryIds = array();
+
+	foreach($inventory AS $inventoryItem)
+	{
+	    $inventoryIds[] = $inventoryItem['id'];
+
+	    $line = new stdClass();
+	    $inventory = new stdClass();
+	    $inventory->eventId = $inventoryItem['eventSbId'];
+	    $inventory->quantity = $inventoryItem['quantity'];
+	    $inventory->section = $inventoryItem['section'];
+	    $inventory->row = $inventoryItem['row'];
+	    $inventory->cost = round($inventoryItem['ticketPrice'] * $inventoryItem['quantity'], 2);
+	    $inventory->listPrice = round($inventoryItem['ticketPrice'] * (100+$markup)/100, 2);
+	    $inventory->expectedValue = round($inventoryItem['ticketPrice'] * (100+$markup)/100, 2);
+	    $inventory->splitType = "NEVERLEAVEONE";
+	    $inventory->inHandDaysBeforeEvent = 1;
+	    //$inventory->inHandDate = date("d/m/y", strtotime($event['datetime'])-86400);
+	    $inventory->notes = $inventoryItem['id'];
+	    
+	    // Make up a seat number
+	    $inventory->lowSeat = rand(1,20000); //$inventoryItem['id'] + 100;
+	    $inventory->highSeat = $inventory->lowSeat + $inventory->quantity - 1;
+	    $inventory->stockType = "ELECTRONIC";
+	    $inventory->seatType = "CONSECUTIVE";
+	    $inventory->broadcast = false;
+	    $inventory->hideSeatNumbers = true;
+
+	    // TODO: Change later
+	    $eventMapping = new stdClass();
+	    $eventMapping->eventName = $inventoryItem['name'];
+	    $eventMapping->venueName = $inventoryItem['venue'];
+	    $eventMapping->eventDate = "2018-09-23T19:30:00.000";
+	    $inventory->eventMapping = $eventMapping;
+
+
+	    $line->inventory = $inventory;
+	    $line->amount = round($inventoryItem['ticketPrice'] * (100+$markup)/100 * $inventoryItem['quantity'], 2);
+	    $line->lineItemType="INVENTORY";
+
+	    $purchase->lines[] = $line;
+	}
+	/*
+
+	echo "<pre>";
+	echo json_encode($purchase, JSON_PRETTY_PRINT);
+	die();
+	 * 
+	 */
+	error_log(json_encode($purchase, JSON_PRETTY_PRINT));
+	$urlSuffix = "purchases";
+	$requestType = "POST";
+	$postFields = json_encode($purchase);
+	$out = self::apiRequest($urlSuffix, $requestType, $postFields);
+	
+	// Error
+	if(!$out)
+	{
+	    $notification = "Failed to upload " . count($inventoryIds) . " groups of tickets to Skybox";
+	    storeNotification("exportSkybox", $notification, "error");
+	}
+	else
+	{
+	    $notification = "Uploaded " . count($inventoryIds) . " groups of tickets to Skybox";
+	    insertHistory($tour, "Uploaded tour to Skybox", $notification);
+	    storeNotification("exportSkybox", $notification, "success");
+	}
+	
+	$skybox = json_decode($out);
+
+	foreach($skybox->lines AS $line)
+	{
+	    $sbId = $line->inventory->id;
+	    $section = $line->inventory->section;
+	    $row = $line->inventory->row;
+	    $eventSbId = $line->inventory->eventId;
+	    $query = "UPDATE inventory i left join events e on i.tmId=e.tmId SET skyboxStatus='ON SKYBOX', i.sbId='$sbId' WHERE section='$section' and row='$row' and e.sbId='$eventSbId' ";
+	    DB::query($query);
+	}
+
+    }
+    
     static function removeInventory($inventorySkyboxId)
     {
 	$urlSuffix = "inventory/$inventorySkyboxId/tickets";

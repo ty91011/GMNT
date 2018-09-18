@@ -594,6 +594,56 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
     return $inventory;
 }
 
+function getFilteredTourInventory($tour, $maxPrice, $minGroups, $markup, $maxRows)
+{
+    // Build query
+    $parameters = "";
+    $parameters .= " and ticketPrice <= $maxPrice and i.availability >= $minGroups ";
+
+    
+    // escape apostrophes in tours
+    $tour = str_replace("'", "''", $tour);
+    
+    $query = "
+		select t1.*, t2.price as vividPrice
+	from
+	(
+	    select i.*, e.datetime, e.name, e.venue, e.tour, e.sbId as eventSbId, @row_number :=CASE when @section = section and @tmId = i.tmId then @row_number+1 else 1 end as a, @section := section, @tmId := i.tmId
+	    from inventory i left join events e on i.tmId=e.tmId
+	    where tour='$tour' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' and e.datetime >= NOW() $parameters
+	    order by tmId, section asc, row asc
+	) t1  
+	left join 
+	(	
+		select tmId, section, row, min(price) as price 
+		from vividComps 
+		group by tmId, section, row
+	) t2 on t1.tmId=t2.tmId and t1.section=t2.section and t1.row=t2.row and t1.tmId=t2.tmId
+	where a <= $maxRows
+	order by t1.section asc, t1.row asc
+     ";
+//    echo $query; die();
+
+    $mysqli = mysqli_connect("db.gmntt.com", "gmntt", "Chester123!@#", "gmntt");
+    if ($mysqli->connect_errno) {
+	printf("Connect failed: %s\n", $mysqli->connect_error);
+	exit();
+    }
+
+    $res = mysqli_query($mysqli, "set @row_number:=1");
+    $res = mysqli_query($mysqli, "set @section := '1'");
+    $res = mysqli_query($mysqli, "set @tmId := '1'");
+    $res = mysqli_query($mysqli, $query);
+
+    $inventory = array();
+    while($row = $res->fetch_assoc())
+    {
+	$inventory[] = $row;
+    }
+
+    return $inventory;
+}
+
 function redirect($url)
 {
     header("Location: $url");

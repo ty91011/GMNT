@@ -7,6 +7,9 @@ if(isset($_POST['importEventIds']))
     // Import IDS
     $parts = preg_split('/\s+/', $_POST['importEventIds']);
     
+
+    
+    $importCount = 0;
     $events = array();
     foreach($parts AS $key => $eventId)
     {
@@ -15,10 +18,17 @@ if(isset($_POST['importEventIds']))
 	// Weed out invalid events
 	if($event)
 	{
-	    $events[] = $event;
+	    $importCount++;
 	}
+	unset($event);
     }
-    $importCount = count($events);
+    
+    // Update tour info for events
+    if(isset($_POST['tour']))
+    {
+	$query = "UPDATE events SET tour=$tour WHERE tmId IN (" . implode(",", $parts);
+	DB::query($query);
+    }
     
     $importAlert =  "Holy guacamole!</strong> Imported $importCount Event(s)<br><ul>";
     

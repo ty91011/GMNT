@@ -48,6 +48,7 @@ if(isset($_POST['cache']) && isset($_POST['tmId']) && isset($_POST['cacheTime'])
         <div class="right_col" role="main">
 	    <?php include("sections/mainTiles.php"); ?>
           
+	    <!--
           <div class="x_panel">
             <div class="row x_title">
 		<?php showNotification("importAlert"); ?>
@@ -65,11 +66,12 @@ if(isset($_POST['cache']) && isset($_POST['tmId']) && isset($_POST['cacheTime'])
                 </div>
             </div>
           </div>
+	    -->
             <div class="x_panel">
               <div class="row">
                   <div class="col-md-12 col-sm-12 col-xs-12">
                       <div class="x_content">
-			    <?php include("sections/eventsList.php"); ?>
+			    <?php include("sections/toursList.php"); ?>
 			</div>
                 </div>
             </div>

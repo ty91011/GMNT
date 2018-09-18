@@ -32,7 +32,9 @@
                     <ul class="nav child_menu">
                       <li><a href="index.php">Dashboard</a></li>
 		      <li><a href="event.php">Event Details</a></li>
-		      <li><a href="tour.php">Add Tour</a></li>
+		      <li><a href="tours.php">All Tours</a></li>
+		      <li><a href="tour.php">Tour Details</a></li>
+		      <li><a href="search.php">Search TM Events</a></li>
 		      <li><a href="history.php">History</a></li>
                       <!--<li><a href="index2.html">Dashboard2</a></li>
                       <li><a href="index3.html">Dashboard3</a></li>-->
