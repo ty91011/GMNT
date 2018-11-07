@@ -26,6 +26,7 @@ include("classes/skybox.php");
 include("classes/constants.php");
 include("classes/proxies.php");
 include("classes/vividseats.php");
+include("classes/ticketnetwork.php");
 
 
 include("functions.php");

@@ -64,6 +64,7 @@ function populateEvent($event, $force=false)
     // Grab all offers for event
     $offers = getOffers($contents);
 
+//var_dump($offers); die();
     // Grab all seats in venue
     $allSeats = getEventSeats($eventId);
 
@@ -104,6 +105,7 @@ function populateEvent($event, $force=false)
 	
 	if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
 	{
+
 	    continue;
 	}
 
@@ -121,7 +123,8 @@ function populateEvent($event, $force=false)
 	    "offerType" => $seat['offer']['offerType']
 	);
     }
-
+    
+    
     $event['tickets'] = $tickets;
 
     unset($allSeats);
@@ -344,10 +347,12 @@ function getOffers($contents)
     $offers = array();
     
     $matches = array();
-    preg_match("/storeUtils\['eventOfferJSON']=(\[.*\])/", $contents, $matches);
-    
+    $str = strstr($contents, "storeUtils['eventOfferJSON");
+    //echo $str;
+    preg_match("/storeUtils\['eventOfferJSON']= (\[.*\])/", $contents, $matches);
+
     $offersJSON = json_decode($matches[1], true);
-    
+ 
     // Parse each offer group
     foreach($offersJSON AS $offer)
     {
