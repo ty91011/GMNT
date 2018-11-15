@@ -105,7 +105,7 @@ function populateEvent($event, $force=false)
 	
 	if(!$seat['seat'] || $seat['offer']['inventoryType'] != 'primary' || strstr($seat['offer']['name'], "Citi") || strstr($seat['offer']['name'], "Visa"))
 	{
-
+	    
 	    continue;
 	}
 
@@ -123,7 +123,7 @@ function populateEvent($event, $force=false)
 	    "offerType" => $seat['offer']['offerType']
 	);
     }
-    
+
     
     $event['tickets'] = $tickets;
 
@@ -133,7 +133,7 @@ function populateEvent($event, $force=false)
     $availableSeats = null;
 
     // Refresh all data sets
-    if(!$fromCache || $force)
+    if(!$fromCache || $force || true)
     {
 	updateInventory($eventId, $tickets);
     }
@@ -351,6 +351,7 @@ function getOffers($contents)
     //echo $str;
     preg_match("/storeUtils\['eventOfferJSON']= (\[.*\])/", $contents, $matches);
 
+
     $offersJSON = json_decode($matches[1], true);
  
     // Parse each offer group
@@ -561,8 +562,9 @@ function getEventSeats($eventId)
     return $seats;
 }
 
-function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows)
+function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection)
 {
+    
     // Build query
     $parameters = "";
     $parameters .= " and ticketPrice <= $maxPrice and availability >= $minGroups ";
@@ -576,7 +578,23 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
 	    where tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' $parameters
 	    order by section asc, row asc
 	) t1  left join (select tmId, section, row, min(price) as price from vividComps group by tmId, section, row) t2 on t1.tmId=t2.tmId and t1.section=t2.section and t1.row=t2.row
-	where a <= $maxRows
+	where 
+	t1.section in
+	(
+	    select t1.section
+	    from
+	    (
+		select *, @row_number :=CASE when @section = section then @row_number+1 else 1 end as a, @section := section 
+		from inventory 
+		where tmId='$eventId' and tmStatus='AVAILABLE' and skyboxStatus != 'ON SKYBOX' $parameters
+		order by section asc, row asc
+	    ) t1  left join (select tmId, section, row, min(price) as price from vividComps group by tmId, section, row) t2 on t1.tmId=t2.tmId and t1.section=t2.section and t1.row=t2.row
+	    group by t1.section
+	    having max(a) >= $minRowsInSection
+
+	)
+
+	and a <= $maxRows+1 and a != 1
 	order by t1.section asc, t1.row asc
      ";
 
@@ -599,7 +617,7 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
     return $inventory;
 }
 
-function getFilteredTourInventory($tour, $maxPrice, $minGroups, $markup, $maxRows)
+function getFilteredTourInventory($tour, $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection)
 {
     // Build query
     $parameters = "";

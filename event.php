@@ -23,6 +23,7 @@ $minGroups = isset($_POST['minGroups']) && $_POST['minGroups'] != '' ? $_POST['m
 $minPrice = isset($_POST['minPrice']) && $_POST['minPrice'] != '' ? $_POST['minPrice'] : "0";
 $maxPrice = isset($_POST['maxPrice']) && $_POST['maxPrice'] != '' ? $_POST['maxPrice'] : "1000000";
 $maxRows = isset($_POST['maxRows']) && $_POST['maxRows'] != '' ? $_POST['maxRows'] : "2";
+$minRowsInSection = isset($_POST['minRowsInSection']) && $_POST['minRowsInSection'] != '' ? $_POST['minRowsInSection'] : "2";
 
 
 // Force event refresh

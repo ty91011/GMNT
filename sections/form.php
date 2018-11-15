@@ -29,10 +29,24 @@
                         </div>
                       </div>
 		    <div class="form-group">
-                        <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Maximum Rows per Section
+                        <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Maximum Rows Selected per Section
                         </label>
                         <div class="col-md-6 col-sm-6 col-xs-12">
                           <input type="text" placeholder="<?php echo $maxRows; ?>" name="maxRows" value="<?php echo $_POST['maxRows']; ?>" class="form-control col-md-7 col-xs-12">
+                        </div>
+                      </div>
+		    <div class="form-group">
+                        <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Minimum Rows a Section Needs to Have Available
+                        </label>
+                        <div class="col-md-6 col-sm-6 col-xs-12">
+                          <input type="text" placeholder="<?php echo $minRowsInSection; ?>" name="minRowsInSection" value="<?php echo $_POST['minRowsInSection']; ?>" class="form-control col-md-7 col-xs-12">
+                        </div>
+                      </div>
+			<div class="form-group">
+                        <label class="control-label col-md-3 col-sm-3 col-xs-12" for="first-name">Ignore Best Available Row in Section
+                        </label>
+                        <div class="col-md-6 col-sm-6 col-xs-12">
+                           <input type="checkbox" class="flat" disabled="disabled" checked="checked">
                         </div>
                       </div>
 		    <div class="form-group">
