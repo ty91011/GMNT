@@ -606,6 +606,7 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
 
     $res = mysqli_query($mysqli, "set @row_number:=1");
     $res = mysqli_query($mysqli, "set @section := '1'");
+    
     $res = mysqli_query($mysqli, $query);
 
     $inventory = array();
@@ -617,7 +618,8 @@ function getFilteredInventory($eventId, $maxPrice, $minGroups, $markup, $maxRows
     return $inventory;
 }
 
-function getFilteredTourInventory($tour, $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection)
+// TODO: minrowsinsection
+function getFilteredTourInventory($tour, $maxPrice, $minGroups, $markup, $maxRows)
 {
     // Build query
     $parameters = "";

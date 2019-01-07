@@ -44,14 +44,14 @@ if(isset($_POST['map']) && $_POST['sbId'] != '')
 
 if(isset($_POST['UPLOAD']) && $_POST['UPLOAD'] != '')
 {
-    Skybox::uploadTickets($event, $maxPrice, $minGroups, $markup, $maxRows);
+    Skybox::uploadTickets($event, $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection);
     
     // Get newly updated event
     $event = getEvent($eventId);
 
 }
 
-$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
+$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection);
 
 ?>
 

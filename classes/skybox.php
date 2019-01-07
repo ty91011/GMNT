@@ -10,9 +10,9 @@ class Skybox
     const DEFALUT_VENDOR_ID = 1283525;
     
     // Start SKYBOX functionality
-    static function uploadTickets($event, $maxPrice, $minGroups, $markup, $maxRows)
+    static function uploadTickets($event, $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection)
     {
-	$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows);
+	$inventory = getFilteredInventory($event['tmId'], $maxPrice, $minGroups, $markup, $maxRows, $minRowsInSection);
 
 	$purchase = new stdClass();
 	$purchase->vendorId = self::DEFALUT_VENDOR_ID;
